@@ -199,7 +199,7 @@
             background: #3b82f6;
         }
 
-        /* Custom Toggle Switch */
+        /* Custom Toggle Switch Standard */
         .switch {
             position: relative;
             display: inline-block;
@@ -243,6 +243,52 @@
 
         input:checked + .slider:before {
             transform: translateX(16px);
+        }
+
+        /* Custom Toggle Switch (Small) voor mobiel */
+        .switch-sm {
+            position: relative;
+            display: inline-block;
+            width: 30px;
+            height: 16px;
+        }
+
+        .switch-sm input { 
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider-sm {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #cbd5e1;
+            transition: .3s;
+            border-radius: 16px;
+        }
+
+        .slider-sm:before {
+            position: absolute;
+            content: "";
+            height: 10px;
+            width: 10px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider-sm {
+            background-color: #3b82f6;
+        }
+
+        input:checked + .slider-sm:before {
+            transform: translateX(14px);
         }
     </style>
 </head>
@@ -350,46 +396,41 @@
 
     <!-- Sidepanel / Bibliotheek -->
     <aside id="main-sidebar" 
-           onpointerdown="event.stopPropagation()" 
-           ontouchstart="event.stopPropagation()" 
-           ontouchmove="event.stopPropagation()" 
-           ontouchend="event.stopPropagation()" 
-           class="hidden md:flex flex-col w-full h-full md:w-80 fixed md:relative inset-0 md:inset-auto z-[150] md:z-50 bg-white shadow-2xl overflow-hidden border-r border-slate-200 shrink-0" 
-           style="touch-action: pan-y !important;">
+           class="hidden md:flex flex-col w-full h-full md:w-80 fixed md:relative inset-0 md:inset-auto z-[150] md:z-50 bg-white shadow-2xl overflow-hidden border-r border-slate-200 shrink-0">
         
         <!-- Desktop Resize Handle op de rechter rand -->
         <div id="sidebar-resize-handle" class="hidden md:block absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-500/20 active:bg-blue-500/40 transition-colors z-[60]"></div>
 
         <!-- Mobiele sluitbalk bovenaan bibliotheek inclusief Uitbreidingen en Sluitknop (X) -->
-        <div class="p-3 border-b border-slate-200 flex items-center justify-between md:hidden bg-slate-900 text-white shadow-md gap-2 shrink-0">
-            <!-- Mobiele Uitbreidingen Toggles direct in de header bar (vervangt de titel) -->
-            <div class="flex items-center justify-start gap-2.5 flex-1 overflow-x-auto scrollbar-none">
+        <div class="p-2 border-b border-slate-200 flex items-center justify-between md:hidden bg-slate-900 text-white shadow-md gap-1 shrink-0">
+            <!-- Mobiele Uitbreidingen Toggles direct in de header bar (strak op één regel, Demons volledig uitgeschreven) -->
+            <div class="flex items-center justify-between flex-1 gap-1">
                 <div class="flex items-center gap-1 shrink-0">
                     <span class="text-[9px] font-black text-slate-300 uppercase tracking-tight">😈 Demons</span>
-                    <label class="switch scale-75">
+                    <label class="switch-sm">
                         <input type="checkbox" id="demons-toggle-mobile" onchange="toggleDemons(this.checked)">
-                        <span class="slider"></span>
+                        <span class="slider-sm"></span>
                     </label>
                 </div>
-                <div class="flex items-center gap-1 shrink-0 border-l border-slate-800 pl-2">
+                <div class="flex items-center gap-1 shrink-0 border-l border-slate-800 pl-1.5">
                     <span class="text-[9px] font-black text-slate-300 uppercase tracking-tight">⚠️ Muisca</span>
-                    <label class="switch scale-75">
+                    <label class="switch-sm">
                         <input type="checkbox" id="dangers-muisca-toggle-mobile" onchange="toggleDangersMuisca(this.checked)">
-                        <span class="slider"></span>
+                        <span class="slider-sm"></span>
                     </label>
                 </div>
-                <div class="flex items-center gap-1 shrink-0 border-l border-slate-800 pl-2">
+                <div class="flex items-center gap-1 shrink-0 border-l border-slate-800 pl-1.5">
                     <span class="text-[9px] font-black text-slate-300 uppercase tracking-tight">🐉 Dragons</span>
-                    <label class="switch scale-75">
+                    <label class="switch-sm">
                         <input type="checkbox" id="dragons-toggle-mobile" onchange="toggleDragons(this.checked)">
-                        <span class="slider"></span>
+                        <span class="slider-sm"></span>
                     </label>
                 </div>
             </div>
             
             <!-- Sluitknop -->
-            <button onclick="toggleSidebar()" class="text-slate-400 hover:text-white p-1 shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <button onclick="toggleSidebar()" class="text-slate-400 hover:text-white p-1 shrink-0 ml-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
         </div>
 
@@ -789,33 +830,6 @@
             document.getElementById('manifest-modal').classList.remove('hidden');
         }
 
-        function closeManifestModal() {
-            document.getElementById('manifest-modal').classList.add('hidden');
-        }
-
-        function copyManifestToClipboard() {
-            const data = generateManifestData();
-            let text = "=== EL DORADO KAART MANIFEST ===\n\n";
-            text += "Grote Tegels:\n";
-            text += data.tegels.length > 0 ? data.tegels.join(", ") : "Geen";
-            text += "\n\nBlokkades:\n";
-            text += data.blokkades.length > 0 ? data.blokkades.join(", ") : "Geen";
-            text += "\n\nGemaakt met Tegel Studio Pro!";
-
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            textarea.style.position = 'fixed'; 
-            document.body.appendChild(textarea);
-            textarea.select();
-            try {
-                document.execCommand('copy');
-                showCustomNotification('Manifest gekopieerd naar klembord!');
-            } catch (err) {
-                showCustomNotification('Kopiëren mislukt. Probeer het handmatig.', true);
-            }
-            document.body.removeChild(textarea);
-        }
-
         // --- BACK-UP IMPORT & EXPORT LOGICA ---
         function exportProjects() {
             const projects = localStorage.getItem('eldorado_saved_projects');
@@ -1206,7 +1220,6 @@
             saveStateToLocal();
         }
 
-        // --- DEPT/LAAG MANAGEMENT ---
         function moveSelectedUp() {
             if (!selectedTileId) return;
             const idx = placedTiles.findIndex(t => t.instanceId === selectedTileId);
