@@ -64,7 +64,7 @@
         .tile-placed .control-btn {
             display: none;
             position: absolute;
-            z-index: 220;
+            z-index: 520;
             color: white;
             border-radius: 50%;
             align-items: center;
@@ -102,7 +102,7 @@
         }
 
         .tile-active {
-            z-index: 200 !important;
+            z-index: 500 !important;
             cursor: move;
         }
 
@@ -197,6 +197,61 @@
 
         #project-resize-handle:hover::after {
             background: #3b82f6;
+        }
+
+        /* Custom Scrollbar styling voor categorie-tabs */
+        .scrollbar-none::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-none {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Custom Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 20px;
+        }
+
+        .switch input { 
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #cbd5e1;
+            transition: .3s;
+            border-radius: 20px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #3b82f6;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(16px);
         }
     </style>
 </head>
@@ -324,9 +379,23 @@
                 </button>
             </div>
 
+            <!-- Demonen Toggle & Categorie Tabs -->
+            <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/50 space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Demonen Uitbreiding</span>
+                    <label class="switch scale-90">
+                        <input type="checkbox" id="demons-toggle" onchange="toggleDemons(this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                
+                <div class="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none" id="category-tabs">
+                    <!-- Categorie knoppen worden hier dynamisch gegenereerd -->
+                </div>
+            </div>
+
             <!-- Bibliotheek Sectie -->
-            <div class="p-4 bg-slate-50 flex-1">
-                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 mb-4 block">Bibliotheek</span>
+            <div class="p-4 bg-slate-50 flex-1 overflow-y-auto">
                 <div class="grid grid-cols-2 gap-3" id="tile-grid"></div>
             </div>
         </div>
@@ -353,7 +422,7 @@
         </div>
 
         <!-- Zwevende Laag- & Diepte-regeling balk -->
-        <div id="layer-control-bar" class="absolute bottom-20 md:bottom-8 left-1/2 -translate-x-1/2 hidden flex items-center gap-2 bg-slate-900/95 backdrop-blur-md p-3 px-5 rounded-2xl shadow-2xl z-40 border border-slate-700 max-w-[90vw] overflow-x-auto">
+        <div id="layer-control-bar" class="absolute bottom-20 md:bottom-8 left-1/2 -translate-x-1/2 hidden flex items-center gap-2 bg-slate-900/95 backdrop-blur-md p-3 px-5 rounded-2xl shadow-2xl z-[450] border border-slate-700 max-w-[90vw] overflow-x-auto">
             <span id="active-tile-label" class="text-[10px] font-black text-slate-400 uppercase tracking-widest border-r border-slate-800 pr-4 mr-2 shrink-0">Tegel</span>
             
             <div class="flex items-center gap-1">
@@ -404,6 +473,19 @@
             tileAssets[name] = `./assets/${name}`;
         });
 
+        // Categorie data en state
+        const categories = [
+            { id: 'basisspel', label: '🗺️ Basis' },
+            { id: 'demonen', label: '😈 Demonen' },
+            { id: 'dangers', label: '⚠️ Dangers' },
+            { id: 'muisca', label: '🏺 Muisca' },
+            { id: 'draken', label: '🐉 Draken' },
+            { id: 'blokkades', label: '🚧 Blokkades' }
+        ];
+        
+        let activeCategory = 'basisspel';
+        let demonsActive = false;
+
         let placedTiles = [];
         let selectedTileId = null;
         let zoom = 0.3; 
@@ -414,6 +496,63 @@
         let dragOffset = { x: 0, y: 0 };
         let isPanning = false;
         let startPan = { x: 0, y: 0 };
+
+        // --- EXPANSIE FILTER FUNCTIE ---
+        function getCategoryForTile(fileName) {
+            const name = fileName.replace('.gif', '');
+            const num = parseInt(name);
+            
+            if (isNaN(num)) {
+                // Het is een letter (A-Z)
+                if (['Y', 'Z'].includes(name)) return 'basisspel';
+                if (['S', 'T', 'U', 'V', 'W', 'X'].includes(name)) return 'demonen';
+                return 'basisspel'; // A t/m R
+            } else {
+                // Het is een nummer (1-44)
+                if (num === 1 || num === 2) return 'basisspel';
+                if (num >= 3 && num <= 28) return 'dangers';
+                if (num >= 29 && num <= 36) return 'muisca';
+                if (num >= 37 && num <= 44) return 'blokkades';
+            }
+            return 'basisspel';
+        }
+
+        function toggleDemons(isActive) {
+            demonsActive = isActive;
+            document.getElementById('demons-toggle').checked = isActive;
+            if (isActive) {
+                showCustomNotification('Demonen Uitbreiding Actief (Blokkades 37 & 38 Ontgrendeld)');
+            } else {
+                showCustomNotification('Demonen Uitbreiding Gedeactiveerd.');
+            }
+            renderLibrary();
+        }
+
+        function setCategory(catId) {
+            activeCategory = catId;
+            if (catId === 'demonen' && !demonsActive) {
+                toggleDemons(true);
+            }
+            renderCategoryTabs();
+            renderLibrary();
+        }
+
+        function renderCategoryTabs() {
+            const tabsContainer = document.getElementById('category-tabs');
+            tabsContainer.innerHTML = '';
+            categories.forEach(cat => {
+                const btn = document.createElement('button');
+                const isActive = cat.id === activeCategory;
+                btn.className = `px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider shrink-0 transition-all ${
+                    isActive 
+                        ? 'bg-slate-900 text-white shadow-sm' 
+                        : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
+                }`;
+                btn.textContent = cat.label;
+                btn.onclick = () => setCategory(cat.id);
+                tabsContainer.appendChild(btn);
+            });
+        }
 
         // --- CUSTOM TOAST NOTIFICATIE ---
         function showCustomNotification(msg, isError = false) {
@@ -431,8 +570,8 @@
             const num = parseInt(fileName);
             if (!isNaN(num) && num >= 37 && num <= 44) {
                 const blockadeNames = {
-                    37: "Jungle (1)",
-                    38: "Jungle (2)",
+                    37: "Jungle (1) [Demonen]",
+                    38: "Jungle (2) [Demonen]",
                     39: "Jungle (3)",
                     40: "Jungle (4)",
                     41: "Munt (1)",
@@ -473,11 +612,11 @@
 
             tList.innerHTML = data.tegels.length > 0 
                 ? data.tegels.map(t => `<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-md font-bold">${t}</span>`).join('') 
-                : '<span class="text-slate-400 italic">Geen speltegels geplaatst</span>';
+                : '<span class="text-slate-400 italic text-[10px]">Geen speltegels geplaatst</span>';
 
             bList.innerHTML = data.blokkades.length > 0 
-                ? data.blokkades.map(b => `<span class="bg-amber-100 text-amber-800 px-2 py-1 rounded-md font-bold">${b}</span>`).join('') 
-                : '<span class="text-slate-400 italic">Geen blokkades geplaatst</span>';
+                ? data.blokkades.map(b => `<span class="bg-amber-100 text-amber-800 px-2 py-1 rounded-md font-bold text-[10px]">${b}</span>`).join('') 
+                : '<span class="text-slate-400 italic text-[10px]">Geen blokkades geplaatst</span>';
 
             document.getElementById('manifest-modal').classList.remove('hidden');
         }
@@ -715,6 +854,7 @@
         // --- CORE STUDIO LOGIC ---
         window.onload = () => {
             const hasSession = loadStateFromLocal();
+            renderCategoryTabs();
             renderLibrary();
             renderProjectList();
             if (!hasSession) {
@@ -764,14 +904,24 @@
         function renderLibrary() {
             tileLibrary.innerHTML = '';
             
-            // --- Sectie 1: Grote speltegels ---
-            const sectieTegels = document.createElement('div');
-            sectieTegels.className = 'col-span-2 mb-1';
-            sectieTegels.innerHTML = '<span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1 border-b border-slate-100 pb-1">Grote Speltegels (A-Z, 1-36)</span>';
-            tileLibrary.appendChild(sectieTegels);
+            if (activeCategory === 'draken') {
+                const placeholder = document.createElement('div');
+                placeholder.className = 'col-span-2 py-12 px-4 text-center';
+                placeholder.innerHTML = `
+                    <div class="flex flex-col items-center gap-2">
+                        <span class="text-3xl">🐉</span>
+                        <span class="text-xs font-black text-slate-800 uppercase tracking-wider">Draken Uitbreiding</span>
+                        <p class="text-[10px] text-slate-400 max-w-[180px] leading-relaxed">Hier zijn nog geen tegels van beschikbaar. Deze uitbreiding verschijnt later!</p>
+                    </div>
+                `;
+                tileLibrary.appendChild(placeholder);
+                return;
+            }
 
-            const listTegels = tileNames.slice(0, 62);
-            listTegels.forEach((fileName) => {
+            // Filter tegels op basis van geselecteerde categorie
+            const filteredTiles = tileNames.filter(fileName => getCategoryForTile(fileName) === activeCategory);
+
+            filteredTiles.forEach((fileName) => {
                 const status = checkTileStatus(fileName);
                 const container = document.createElement('div');
                 
@@ -779,14 +929,23 @@
                 let badgeHTML = '';
                 let clickAction = () => addTile(fileName);
 
-                if (status === 'self') {
+                // Demonen Blokkade uitsluiting (37 en 38)
+                if (activeCategory === 'blokkades' && (fileName === "37.gif" || fileName === "38.gif")) {
+                    if (!demonsActive) {
+                        statusClasses = 'opacity-30 border-slate-200 bg-slate-100 pointer-events-none cursor-not-allowed grayscale';
+                        badgeHTML = `<span class="absolute top-1 right-1 bg-slate-500 text-white text-[7px] font-black px-1 py-0.5 rounded uppercase tracking-wider scale-95 origin-top-right">Vereist Demonen</span>`;
+                        clickAction = null;
+                    }
+                }
+
+                if (status === 'self' && clickAction) {
                     statusClasses = 'opacity-40 border-emerald-500 bg-emerald-50/10 pointer-events-none';
-                    badgeHTML = '<span class="absolute top-1 right-1 bg-emerald-600 text-white text-[7px] font-black px-1 rounded uppercase tracking-wider scale-90 origin-top-right">Op bord</span>';
+                    badgeHTML = '<span class="absolute top-1 right-1 bg-emerald-600 text-white text-[7px] font-black px-1 py-0.5 rounded uppercase tracking-wider scale-95 origin-top-right">Op bord</span>';
                     clickAction = null;
-                } else if (status === 'partner') {
+                } else if (status === 'partner' && clickAction) {
                     const partner = getPartnerName(fileName).replace('.gif', '');
                     statusClasses = 'opacity-25 border-amber-500 bg-amber-50/5 pointer-events-none grayscale';
-                    badgeHTML = `<span class="absolute top-1 right-1 bg-amber-600 text-white text-[7px] font-black px-1 rounded uppercase tracking-wider scale-90 origin-top-right">KANT ${partner} ACTIEF</span>`;
+                    badgeHTML = `<span class="absolute top-1 right-1 bg-amber-600 text-white text-[7px] font-black px-1 py-0.5 rounded uppercase tracking-wider scale-95 origin-top-right">KANT ${partner} ACTIEF</span>`;
                     clickAction = null;
                 }
 
@@ -805,43 +964,6 @@
                 };
                 tileLibrary.appendChild(container);
             });
-
-            // --- Sectie 2: Blokkades ---
-            const sectieBlokkades = document.createElement('div');
-            sectieBlokkades.className = 'col-span-2 mt-4 mb-1';
-            sectieBlokkades.innerHTML = '<span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1 border-b border-slate-100 pb-1">Blokkades (37-44)</span>';
-            tileLibrary.appendChild(sectieBlokkades);
-
-            const listBlokkades = tileNames.slice(62);
-            listBlokkades.forEach((fileName) => {
-                const isPlaced = placedTiles.some(pt => pt.id === fileName);
-                const container = document.createElement('div');
-                
-                let statusClasses = 'bg-white border-slate-200';
-                let badgeHTML = '';
-                let clickAction = () => addTile(fileName);
-
-                if (isPlaced) {
-                    statusClasses = 'opacity-40 border-emerald-500 bg-emerald-50/10 pointer-events-none';
-                    badgeHTML = '<span class="absolute top-1 right-1 bg-emerald-600 text-white text-[7px] font-black px-1 rounded uppercase tracking-wider scale-90 origin-top-right">Op bord</span>';
-                    clickAction = null;
-                }
-
-                container.className = `sidebar-item relative rounded-xl shadow-sm border p-2 cursor-pointer ${statusClasses}`;
-                container.innerHTML = `
-                    ${badgeHTML}
-                    <div class="aspect-square flex items-center justify-center overflow-hidden">
-                        <img src="${tileAssets[fileName]}" class="max-w-full max-h-full object-contain" 
-                             onerror="this.style.display='none'; this.parentElement.innerHTML='<span class=\'text-[8px] text-slate-400 font-bold uppercase\'>${getFriendlyName(fileName)}</span>'" 
-                             style="image-rendering: pixelated;">
-                    </div>
-                `;
-                if (clickAction) container.onclick = () => {
-                    clickAction();
-                    if (window.innerWidth < 768) toggleSidebar(); 
-                };
-                tileLibrary.appendChild(container);
-            });
         }
 
         function addTile(fileName) {
@@ -849,7 +971,9 @@
             const centerX = (-panX + (viewRect.width / 2)) / zoom;
             const centerY = (-panY + (viewRect.height / 2)) / zoom;
 
-            const isBlockade = parseInt(fileName) >= 37;
+            const num = parseInt(fileName);
+            const isBlockade = !isNaN(num) && num >= 37 && num <= 44;
+            const isMuisca = !isNaN(num) && num >= 29 && num <= 36;
             const instId = 'inst_' + Math.random().toString(36).substr(2, 9);
             
             placedTiles.push({
@@ -858,7 +982,8 @@
                 x: Math.round(centerX),
                 y: Math.round(centerY),
                 rotation: 0,
-                isBlockade: isBlockade
+                isBlockade: isBlockade,
+                isMuisca: isMuisca
             });
             selectedTileId = instId;
             renderCanvas();
@@ -927,8 +1052,17 @@
                 el.style.top = `${tile.y}px`;
                 el.style.transform = `rotate(${tile.rotation}deg)`;
                 
-                // Blokkades staan altijd bovenop andere tegels
-                el.style.zIndex = tile.isBlockade ? (100 + idx) : idx;
+                // Laag hiërarchie regels:
+                // Basis/Demonen/Dangers: idx
+                // Muisca: 100 + idx (altijd bovenop grote tegels)
+                // Blokkades: 200 + idx (altijd bovenop Muisca & grote tegels)
+                let zIndex = idx;
+                if (tile.isMuisca) {
+                    zIndex = 100 + idx;
+                } else if (tile.isBlockade) {
+                    zIndex = 200 + idx;
+                }
+                el.style.zIndex = zIndex;
                 
                 el.dataset.id = tile.instanceId;
                 el.innerHTML = `
@@ -1117,11 +1251,16 @@
                 staging.style.height = finalH + 'px';
                 staging.style.backgroundColor = exportFormat === 'jpg' ? '#ffffff' : 'transparent';
 
-                // Sorteren voor correcte stacking order tijdens export (blokkades op de voorgrond)
+                // Render in de exacte z-index hiërarchie
                 const sortedTilesForExport = [...placedTiles].sort((a, b) => {
-                    const aZ = a.isBlockade ? (100 + placedTiles.indexOf(a)) : placedTiles.indexOf(a);
-                    const bZ = b.isBlockade ? (100 + placedTiles.indexOf(b)) : placedTiles.indexOf(b);
-                    return aZ - bZ;
+                    const getZ = (t) => {
+                        const tileNum = parseInt(t.id);
+                        const originalIdx = placedTiles.indexOf(t);
+                        if (!isNaN(tileNum) && tileNum >= 37 && tileNum <= 44) return 200 + originalIdx;
+                        if (!isNaN(tileNum) && tileNum >= 29 && tileNum <= 36) return 100 + originalIdx;
+                        return originalIdx;
+                    };
+                    return getZ(a) - getZ(b);
                 });
 
                 sortedTilesForExport.forEach(t => {
