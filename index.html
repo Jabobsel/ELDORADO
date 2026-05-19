@@ -199,15 +199,6 @@
             background: #3b82f6;
         }
 
-        /* Custom Scrollbar styling voor categorie-tabs */
-        .scrollbar-none::-webkit-scrollbar {
-            display: none;
-        }
-        .scrollbar-none {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-
         /* Custom Toggle Switch */
         .switch {
             position: relative;
@@ -357,7 +348,10 @@
         <svg id="sidebar-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
 
-    <aside id="main-sidebar" class="w-full md:w-80 bg-white shadow-2xl flex flex-col z-50 overflow-hidden border-r border-slate-200 transition-all duration-300 max-h-[50vh] md:max-h-screen md:h-full">
+    <aside id="main-sidebar" class="w-full md:w-80 relative bg-white shadow-2xl flex flex-col z-50 overflow-hidden border-r border-slate-200 max-h-[50vh] md:max-h-screen md:h-full shrink-0">
+        <!-- Desktop Resize Handle op de rechter rand -->
+        <div id="sidebar-resize-handle" class="hidden md:block absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-500/20 active:bg-blue-500/40 transition-colors z-[60]"></div>
+
         <div class="p-6 border-b border-slate-200 hidden md:block">
             <h1 class="text-xl font-black text-slate-900 tracking-tighter text-center uppercase">Studio Pro</h1>
         </div>
@@ -379,17 +373,41 @@
                 </button>
             </div>
 
-            <!-- Demonen Toggle & Categorie Tabs -->
-            <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/50 space-y-3">
+            <!-- Uitbreidingen Toggles Paneel -->
+            <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/50 space-y-2">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Uitbreidingen</span>
+                
+                <!-- Toggle Demonen -->
                 <div class="flex items-center justify-between">
-                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Demonen Uitbreiding</span>
-                    <label class="switch scale-90">
+                    <span class="text-[10px] font-bold text-slate-700 uppercase tracking-wider">😈 Hexen & Demonen</span>
+                    <label class="switch scale-75">
                         <input type="checkbox" id="demons-toggle" onchange="toggleDemons(this.checked)">
                         <span class="slider"></span>
                     </label>
                 </div>
-                
-                <div class="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none" id="category-tabs">
+
+                <!-- Toggle Dangers & Muisca -->
+                <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-bold text-slate-700 uppercase tracking-wider">⚠️ Dangers & 🏺 Muisca</span>
+                    <label class="switch scale-75">
+                        <input type="checkbox" id="dangers-muisca-toggle" onchange="toggleDangersMuisca(this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <!-- Toggle Dragons, Treasures & Mysteries -->
+                <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-bold text-slate-700 uppercase tracking-wider">🐉 Dragons & Treasures</span>
+                    <label class="switch scale-75">
+                        <input type="checkbox" id="dragons-toggle" onchange="toggleDragons(this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Categorie Tabs -->
+            <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/30">
+                <div class="flex flex-wrap gap-1.5 pb-1" id="category-tabs">
                     <!-- Categorie knoppen worden hier dynamisch gegenereerd -->
                 </div>
             </div>
@@ -454,6 +472,7 @@
         const projectCount = document.getElementById('project-count');
         const resizeHandle = document.getElementById('project-resize-handle');
         const mainSidebar = document.getElementById('main-sidebar');
+        const sidebarResizeHandle = document.getElementById('sidebar-resize-handle');
 
         const tileNames = [
             "A.gif", "B.gif", "C.gif", "D.gif", "E.gif", "F.gif", "G.gif", "H.gif",
@@ -485,6 +504,8 @@
         
         let activeCategory = 'basisspel';
         let demonsActive = false;
+        let dangersMuiscaActive = false;
+        let dragonsActive = false;
 
         let placedTiles = [];
         let selectedTileId = null;
@@ -521,18 +542,43 @@
             demonsActive = isActive;
             document.getElementById('demons-toggle').checked = isActive;
             if (isActive) {
-                showCustomNotification('Demonen Uitbreiding Actief (Blokkades 37 & 38 Ontgrendeld)');
+                showCustomNotification('Hexen & Demonen Actief (Blokkades 37 & 38 Ontgrendeld)');
             } else {
-                showCustomNotification('Demonen Uitbreiding Gedeactiveerd.');
+                showCustomNotification('Hexen & Demonen Gedeactiveerd.');
             }
+            renderCategoryTabs();
             renderLibrary();
+            saveStateToLocal();
+        }
+
+        function toggleDangersMuisca(isActive) {
+            dangersMuiscaActive = isActive;
+            document.getElementById('dangers-muisca-toggle').checked = isActive;
+            if (isActive) {
+                showCustomNotification('Dangers & Muisca Actief');
+            } else {
+                showCustomNotification('Dangers & Muisca Gedeactiveerd.');
+            }
+            renderCategoryTabs();
+            renderLibrary();
+            saveStateToLocal();
+        }
+
+        function toggleDragons(isActive) {
+            dragonsActive = isActive;
+            document.getElementById('dragons-toggle').checked = isActive;
+            if (isActive) {
+                showCustomNotification('Dragons & Treasures Actief');
+            } else {
+                showCustomNotification('Dragons & Treasures Gedeactiveerd.');
+            }
+            renderCategoryTabs();
+            renderLibrary();
+            saveStateToLocal();
         }
 
         function setCategory(catId) {
             activeCategory = catId;
-            if (catId === 'demonen' && !demonsActive) {
-                toggleDemons(true);
-            }
             renderCategoryTabs();
             renderLibrary();
         }
@@ -540,7 +586,23 @@
         function renderCategoryTabs() {
             const tabsContainer = document.getElementById('category-tabs');
             tabsContainer.innerHTML = '';
-            categories.forEach(cat => {
+            
+            // Filter categorieën op basis van toggles
+            const visibleCategories = categories.filter(cat => {
+                if (cat.id === 'basisspel' || cat.id === 'blokkades') return true;
+                if (cat.id === 'demonen') return demonsActive;
+                if (cat.id === 'dangers' || cat.id === 'muisca') return dangersMuiscaActive;
+                if (cat.id === 'draken') return dragonsActive;
+                return false;
+            });
+
+            // Fallback naar basisspel als de huidige actieve categorie onzichtbaar wordt
+            const activeIsVisible = visibleCategories.some(cat => cat.id === activeCategory);
+            if (!activeIsVisible) {
+                activeCategory = 'basisspel';
+            }
+
+            visibleCategories.forEach(cat => {
                 const btn = document.createElement('button');
                 const isActive = cat.id === activeCategory;
                 btn.className = `px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider shrink-0 transition-all ${
@@ -553,6 +615,34 @@
                 tabsContainer.appendChild(btn);
             });
         }
+
+        // --- RESIZABLE DESKTOP SIDEBAR LOGICA ---
+        let isSidebarResizing = false;
+
+        sidebarResizeHandle.addEventListener('mousedown', (e) => {
+            isSidebarResizing = true;
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            e.preventDefault();
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isSidebarResizing) return;
+            // Beperk breedte tussen 260px en 600px
+            const newWidth = e.clientX;
+            if (newWidth > 260 && newWidth < 600) {
+                mainSidebar.style.width = `${newWidth}px`;
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (isSidebarResizing) {
+                isSidebarResizing = false;
+                document.body.style.cursor = 'default';
+                document.body.style.userSelect = '';
+                saveStateToLocal();
+            }
+        });
 
         // --- CUSTOM TOAST NOTIFICATIE ---
         function showCustomNotification(msg, isError = false) {
@@ -695,7 +785,7 @@
             reader.readAsText(file);
         }
 
-        // --- RESIZE LOGIC ---
+        // --- RESIZE LOGIC PROJECT DRAWER ---
         let isResizing = false;
         resizeHandle.addEventListener('mousedown', (e) => {
             isResizing = true;
@@ -737,7 +827,17 @@
         }
 
         function saveStateToLocal(isAutoSave = true) {
-            const state = { placedTiles, zoom, panX, panY, currentProjectName };
+            const state = { 
+                placedTiles, 
+                zoom, 
+                panX, 
+                panY, 
+                currentProjectName,
+                demonsActive,
+                dangersMuiscaActive,
+                dragonsActive,
+                sidebarWidth: mainSidebar.style.width
+            };
             localStorage.setItem('eldorado_active_session', JSON.stringify(state));
         }
 
@@ -750,6 +850,18 @@
                 panX = data.panX || 0;
                 panY = data.panY || 0;
                 currentProjectName = data.currentProjectName || null;
+                
+                demonsActive = data.demonsActive || false;
+                dangersMuiscaActive = data.dangersMuiscaActive || false;
+                dragonsActive = data.dragonsActive || false;
+
+                document.getElementById('demons-toggle').checked = demonsActive;
+                document.getElementById('dangers-muisca-toggle').checked = dangersMuiscaActive;
+                document.getElementById('dragons-toggle').checked = dragonsActive;
+
+                if (data.sidebarWidth && window.innerWidth >= 768) {
+                    mainSidebar.style.width = data.sidebarWidth;
+                }
                 return true;
             }
             return false;
@@ -910,7 +1022,7 @@
                 placeholder.innerHTML = `
                     <div class="flex flex-col items-center gap-2">
                         <span class="text-3xl">🐉</span>
-                        <span class="text-xs font-black text-slate-800 uppercase tracking-wider">Draken Uitbreiding</span>
+                        <span class="text-xs font-black text-slate-800 uppercase tracking-wider">Dragons, Treasures & Mysteries</span>
                         <p class="text-[10px] text-slate-400 max-w-[180px] leading-relaxed">Hier zijn nog geen tegels van beschikbaar. Deze uitbreiding verschijnt later!</p>
                     </div>
                 `;
@@ -1010,6 +1122,7 @@
             saveStateToLocal();
         }
 
+        // --- DEPT/LAAG MANAGEMENT ---
         function moveSelectedToBack() {
             if (!selectedTileId) return;
             const idx = placedTiles.findIndex(t => t.instanceId === selectedTileId);
