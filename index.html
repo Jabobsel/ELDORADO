@@ -132,8 +132,8 @@
         /* Project Pop-up styling */
         #project-drawer {
             position: absolute;
-            left: 320px; 
-            top: 24px;
+            left: 24px; 
+            top: 80px;
             bottom: 24px;
             width: 300px;
             min-width: 200px;
@@ -150,7 +150,7 @@
         }
 
         #project-drawer.open {
-            transform: translateX(20px);
+            transform: translateX(0);
         }
 
         /* Mobile overrides for project drawer position */
@@ -343,38 +343,42 @@
         </div>
     </div>
 
-    <!-- Mobiele Sidebar Toggle Knop -->
+    <!-- Mobiele Bibliotheek Toggle Knop -->
     <button onclick="toggleSidebar()" class="md:hidden fixed top-4 right-4 z-[60] bg-slate-900 text-white p-3 rounded-full shadow-2xl border border-slate-700">
         <svg id="sidebar-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
 
-    <aside id="main-sidebar" class="w-full md:w-80 relative bg-white shadow-2xl flex flex-col z-50 overflow-hidden border-r border-slate-200 max-h-[50vh] md:max-h-screen md:h-full shrink-0">
+    <!-- Sidepanel / Bibliotheek -->
+    <aside id="main-sidebar" class="hidden md:flex flex-col w-full h-full md:w-80 fixed md:relative inset-0 md:inset-auto z-[150] md:z-50 bg-white shadow-2xl overflow-hidden border-r border-slate-200 shrink-0">
         <!-- Desktop Resize Handle op de rechter rand -->
         <div id="sidebar-resize-handle" class="hidden md:block absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-500/20 active:bg-blue-500/40 transition-colors z-[60]"></div>
 
-        <div class="p-6 border-b border-slate-200 hidden md:block">
-            <h1 class="text-xl font-black text-slate-900 tracking-tighter text-center uppercase">Studio Pro</h1>
+        <!-- Mobiele sluitbalk bovenaan bibliotheek -->
+        <div class="p-4 border-b border-slate-200 flex items-center justify-between md:hidden bg-slate-50">
+            <span class="text-xs font-black text-slate-400 uppercase tracking-widest">Tegel Bibliotheek</span>
+            <button onclick="toggleSidebar()" class="text-slate-500 hover:text-slate-900 p-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
         </div>
 
         <div class="flex-1 overflow-y-auto flex flex-col">
-            <!-- Projecten & Manifest Trigger Knoppen -->
-            <div class="p-4 border-b border-slate-100 flex gap-2">
-                <button onclick="toggleProjectDrawer()" id="btn-toggle-projects" class="flex-1 flex items-center justify-between p-3 bg-slate-900 text-white rounded-2xl shadow-xl hover:bg-black transition-all group">
-                    <div class="flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-400"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
-                        <span class="text-[9px] font-black tracking-widest uppercase">Projecten</span>
-                    </div>
-                    <span id="project-count" class="bg-blue-600 text-[9px] px-1.5 py-0.5 rounded-full font-black">0</span>
-                </button>
-                
-                <button onclick="openManifestModal()" class="p-3 bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-800 rounded-2xl shadow-sm transition-all flex items-center justify-center gap-2" title="Kaart Manifest">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-slate-700"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10M6 10h10"/></svg>
-                    <span class="text-[9px] font-black tracking-widest uppercase text-slate-700">Manifest</span>
-                </button>
+            <!-- Categorie Tabs -->
+            <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/30">
+                <div class="flex flex-wrap gap-1.5 pb-1" id="category-tabs">
+                    <!-- Categorie knoppen worden hier dynamisch gegenereerd -->
+                </div>
             </div>
 
+            <!-- Bibliotheek Grid Sectie -->
+            <div class="p-4 bg-slate-50 flex-1 overflow-y-auto">
+                <div class="grid grid-cols-2 gap-3" id="tile-grid"></div>
+            </div>
+        </div>
+
+        <!-- Onderste Paneel (Toggles & Export) -->
+        <div class="p-4 md:p-6 bg-white border-t border-slate-200 space-y-4">
             <!-- Uitbreidingen Toggles Paneel -->
-            <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/50 space-y-2">
+            <div class="space-y-2 bg-slate-50 p-3 rounded-2xl border border-slate-100">
                 <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Uitbreidingen</span>
                 
                 <!-- Toggle Demonen -->
@@ -404,37 +408,36 @@
                     </label>
                 </div>
             </div>
-
-            <!-- Categorie Tabs -->
-            <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/30">
-                <div class="flex flex-wrap gap-1.5 pb-1" id="category-tabs">
-                    <!-- Categorie knoppen worden hier dynamisch gegenereerd -->
-                </div>
-            </div>
-
-            <!-- Bibliotheek Sectie -->
-            <div class="p-4 bg-slate-50 flex-1 overflow-y-auto">
-                <div class="grid grid-cols-2 gap-3" id="tile-grid"></div>
-            </div>
-        </div>
-
-        <div class="p-4 md:p-6 bg-white border-t border-slate-200 space-y-3">
-            <div class="flex p-1 bg-slate-100 rounded-xl">
-                <button id="format-png" onclick="setExportFormat('png')" class="flex-1 py-1.5 text-[10px] font-black rounded-lg bg-white shadow-sm transition-all">PNG</button>
-                <button id="format-jpg" onclick="setExportFormat('jpg')" class="flex-1 py-1.5 text-[10px] font-black text-slate-500 transition-all">JPG</button>
-            </div>
             
             <button id="btn-save" class="w-full bg-slate-900 hover:bg-black text-white font-black py-3 rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2">
-                <span id="save-text" class="text-[10px] uppercase">Exporteer PNG</span>
-            </button>
-            
-            <button id="btn-reset" class="w-full text-slate-400 hover:text-red-600 font-bold text-[9px] uppercase tracking-widest transition-colors">
-                Nieuw Canvas
+                <span id="save-text" class="text-[10px] uppercase">Exporteer Kaart (JPG)</span>
             </button>
         </div>
     </aside>
 
+    <!-- Canvas en Viewport -->
     <main class="flex-1 relative overflow-hidden flex flex-col">
+        <!-- Floating Canvas Actions -->
+        <div class="absolute top-4 left-4 z-30 flex flex-col gap-2 pointer-events-auto">
+            <!-- Projecten Button -->
+            <button onclick="toggleProjectDrawer()" class="flex items-center gap-2 px-4 py-3 bg-slate-900 text-white rounded-2xl shadow-xl hover:bg-black transition-all text-[10px] font-black uppercase tracking-wider">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-blue-400"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+                <span>Projecten (<span id="project-count">0</span>)</span>
+            </button>
+            
+            <!-- Nieuw Canvas Button -->
+            <button onclick="resetCanvas()" class="flex items-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-800 rounded-2xl shadow-md hover:bg-slate-50 transition-all text-[10px] font-black uppercase tracking-wider">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-red-500"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                <span>Nieuw Canvas</span>
+            </button>
+
+            <!-- Manifest Button -->
+            <button onclick="openManifestModal()" class="flex items-center gap-2 px-4 py-3 bg-white border border-slate-200 text-slate-800 rounded-2xl shadow-md hover:bg-slate-50 transition-all text-[10px] font-black uppercase tracking-wider">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-slate-700"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10M6 10h10"/></svg>
+                <span>Manifest</span>
+            </button>
+        </div>
+
         <div id="viewport">
             <div id="canvas-wrapper"></div>
         </div>
@@ -511,7 +514,6 @@
         let selectedTileId = null;
         let zoom = 0.3; 
         let panX = 0, panY = 0;
-        let exportFormat = 'png';
         let isDraggingTile = false;
         let dragTarget = null;
         let dragOffset = { x: 0, y: 0 };
@@ -628,7 +630,6 @@
 
         window.addEventListener('mousemove', (e) => {
             if (!isSidebarResizing) return;
-            // Beperk breedte tussen 260px en 600px
             const newWidth = e.clientX;
             if (newWidth > 260 && newWidth < 600) {
                 mainSidebar.style.width = `${newWidth}px`;
@@ -812,11 +813,8 @@
 
         // --- MOBILE SIDEBAR TOGGLE ---
         function toggleSidebar() {
-            if (mainSidebar.classList.contains('hidden')) {
-                mainSidebar.classList.remove('hidden');
-            } else {
-                mainSidebar.classList.add('hidden');
-            }
+            const sidebar = document.getElementById('main-sidebar');
+            sidebar.classList.toggle('hidden');
         }
 
         // --- PROJECT MANAGEMENT ---
@@ -988,13 +986,6 @@
             updateTransform();
         }
 
-        function setExportFormat(f) {
-            exportFormat = f;
-            saveText.textContent = `Exporteer ${f.toUpperCase()}`;
-            document.getElementById('format-png').className = f === 'png' ? 'flex-1 py-1.5 text-[10px] font-black rounded-lg bg-white shadow-sm transition-all' : 'flex-1 py-1.5 text-[10px] font-black text-slate-500 transition-all';
-            document.getElementById('format-jpg').className = f === 'jpg' ? 'flex-1 py-1.5 text-[10px] font-black rounded-lg bg-white shadow-sm transition-all' : 'flex-1 py-1.5 text-[10px] font-black text-slate-500 transition-all';
-        }
-
         function getPartnerName(fileName) {
             const idx = tileNames.indexOf(fileName);
             if (idx === -1 || idx >= 62) return null; // Blokkades hebben geen fysieke partners
@@ -1122,7 +1113,6 @@
             saveStateToLocal();
         }
 
-        // --- DEPT/LAAG MANAGEMENT ---
         function moveSelectedToBack() {
             if (!selectedTileId) return;
             const idx = placedTiles.findIndex(t => t.instanceId === selectedTileId);
@@ -1324,7 +1314,7 @@
 
         viewport.onwheel = (e) => { if (e.ctrlKey) { e.preventDefault(); adjustZoom(e.deltaY > 0 ? -0.1 : 0.1, e.clientX, e.clientY); } };
 
-        document.getElementById('btn-reset').onclick = () => { 
+        function resetCanvas() {
             if (!confirm('Nieuw canvas openen? Onopgeslagen wijzigingen in het huidige project gaan verloren.')) return;
             placedTiles = []; 
             selectedTileId = null; 
@@ -1334,7 +1324,7 @@
             centerCanvas();
             renderProjectList();
             saveStateToLocal();
-        };
+        }
         
         document.getElementById('btn-save').onclick = () => {
             if (placedTiles.length === 0) return;
@@ -1362,7 +1352,7 @@
                 staging.innerHTML = '';
                 staging.style.width = finalW + 'px';
                 staging.style.height = finalH + 'px';
-                staging.style.backgroundColor = exportFormat === 'jpg' ? '#ffffff' : 'transparent';
+                staging.style.backgroundColor = '#ffffff'; // Force white background for JPG
 
                 // Render in de exacte z-index hiërarchie
                 const sortedTilesForExport = [...placedTiles].sort((a, b) => {
@@ -1399,15 +1389,14 @@
                 });
 
                 html2canvas(staging, {
-                    backgroundColor: exportFormat === 'jpg' ? '#ffffff' : null,
+                    backgroundColor: '#ffffff', // Force white background for JPG
                     scale: 2,
                     useCORS: true,
                     logging: false
                 }).then(c => {
                     const l = document.createElement('a'); 
-                    const mime = exportFormat === 'jpg' ? 'image/jpeg' : 'image/png';
-                    l.download = `tegel-export-${Date.now()}.${exportFormat}`; 
-                    l.href = c.toDataURL(mime, 1.0); 
+                    l.download = `tegel-export-${Date.now()}.jpg`; 
+                    l.href = c.toDataURL('image/jpeg', 0.95); 
                     l.click();
                     selectedTileId = oldSelected;
                     renderCanvas();
