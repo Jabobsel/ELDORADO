@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tegel Studio Pro - Project Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            overflow: hidden; 
+            background-color: #020617; 
+            touch-action: none; /* Voorkom standaard mobiel scrollen/zoomen */
+        }
+        
+        #viewport {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: relative;
+            cursor: grab;
+            touch-action: none;
+        }
+
+        #viewport.panning { cursor: grabbing; }
+
+        #canvas-wrapper {
+            position: absolute;
+            transform-origin: 0 0;
+            will-change: transform;
+            min-width: 1px;
+            min-height: 1px;
+            touch-action: none;
+        }
+
+        .tile-placed {
+            position: absolute;
+            user-select: none;
+            touch-action: none;
+            background-color: transparent; 
+            border: 2px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* Ware grootte behouden: geen geforceerde breedte/hoogte meer */
+            filter: drop-shadow(0 0 1px rgba(255,255,255,0.1));
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .tile-placed img {
+            max-width: none;
+            /* Ware grootte behouden: geen geforceerde breedte/hoogte meer */
+            image-rendering: pixelated;
+            display: block;
+        }
+
+        .tile-placed.is-selected {
+            border-color: rgba(59, 130, 246, 0.8);
+            z-index: 50;
+            filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.3));
+        }
+
+        .tile-placed .control-btn {
+            display: none;
+            position: absolute;
+            z-index: 120;
+            color: white;
+            border-radius: 50%;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.1s ease;
+        }
+
+        .tile-placed.is-selected .control-btn {
+            display: flex;
+        }
+
+        .btn-rotate {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 56px;
+            height: 56px;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(4px);
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+
+        .btn-rotate:hover {
+            background: rgba(59, 130, 246, 0.9);
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        .btn-delete {
+            top: -10px;
+            left: -10px;
+            width: 28px;
+            height: 28px;
+            background: #ef4444;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5);
+        }
+
+        .tile-active {
+            z-index: 100 !important;
+            cursor: move;
+        }
+
+        .sidebar-item {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid transparent;
+            background-color: #ffffff;
+        }
+
+        .sidebar-item:hover:not(.used) {
+            border-color: #3b82f6;
+            transform: translateY(-2px);
+        }
+
+        .sidebar-item.used {
+            filter: grayscale(100%) brightness(0.5) opacity(0.15);
+            pointer-events: none;
+            background-color: #1e293b;
+        }
+
+        #export-staging {
+            position: fixed;
+            top: -10000px;
+            left: -10000px;
+            background: transparent;
+        }
+
+        .modal-overlay {
+            background-color: rgba(2, 6, 23, 0.85);
+            backdrop-filter: blur(4px);
+        }
+
+        /* Project Pop-up styling */
+        #project-drawer {
+            position: absolute;
+            left: 320px; 
+            top: 24px;
+            bottom: 24px;
+            width: 300px;
+            min-width: 200px;
+            max-width: 800px;
+            background: white;
+            z-index: 40;
+            border-radius: 1.5rem;
+            box-shadow: 20px 0 50px rgba(0,0,0,0.3);
+            transform: translateX(-110%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.05s linear;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+
+        #project-drawer.open {
+            transform: translateX(20px);
+        }
+
+        /* Mobile overrides for project drawer position */
+        @media (max-width: 768px) {
+            #project-drawer {
+                left: 12px;
+                right: 12px;
+                top: 80px;
+                bottom: 80px;
+                width: auto !important;
+                max-width: none;
+                transform: translateY(-150%);
+            }
+            #project-drawer.open {
+                transform: translateY(0);
+            }
+            #project-resize-handle {
+                display: none !important;
+            }
+        }
+
+        /* Resize Handle */
+        #project-resize-handle {
+            position: absolute;
+            right: -4px;
+            top: 20px;
+            bottom: 20px;
+            width: 12px;
+            cursor: col-resize;
+            z-index: 41;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #project-resize-handle::after {
+            content: '';
+            width: 4px;
+            height: 40px;
+            background: #e2e8f0;
+            border-radius: 2px;
+            transition: background 0.2s;
+        }
+
+        #project-resize-handle:hover::after {
+            background: #3b82f6;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col md:flex-row">
+
+    <div id="export-staging"></div>
+
+    <!-- Project Pop-up Paneel -->
+    <div id="project-drawer">
+        <!-- Resize Handle -->
+        <div id="project-resize-handle"></div>
+
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Opgeslagen Projecten</span>
+            <button onclick="toggleProjectDrawer()" class="text-slate-400 hover:text-slate-900 transition-colors p-1">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+        </div>
+        <div id="project-list" class="flex-1 overflow-y-auto p-3 space-y-1.5 bg-slate-50/50">
+            <!-- Projecten komen hier -->
+        </div>
+        <div class="p-4 border-t border-slate-100">
+            <button onclick="openSaveModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-3 rounded-xl shadow-lg transition-all text-[10px] flex items-center justify-center gap-2 uppercase tracking-tight">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                Opslaan
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal voor opslaan -->
+    <div id="save-modal" class="modal-overlay fixed inset-0 z-[100] hidden flex items-center justify-center p-6">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl">
+            <h3 class="text-xl font-black text-slate-900 mb-2">Ontwerp Opslaan</h3>
+            <p class="text-slate-500 text-sm mb-6">Geef je project een herkenbare naam.</p>
+            <input type="text" id="project-name-input" class="w-full bg-slate-100 border-none rounded-xl py-4 px-4 font-bold text-slate-900 mb-6 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Mijn Meesterwerk...">
+            <div class="flex gap-3">
+                <button onclick="closeSaveModal()" class="flex-1 py-3 text-slate-400 font-bold hover:text-slate-600 transition-colors text-sm">Annuleren</button>
+                <button onclick="confirmSaveProject()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-black py-3 rounded-xl shadow-lg transition-all text-sm">Opslaan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobiele Sidebar Toggle Knop -->
+    <button onclick="toggleSidebar()" class="md:hidden fixed top-4 right-4 z-[60] bg-slate-900 text-white p-3 rounded-full shadow-2xl border border-slate-700">
+        <svg id="sidebar-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+
+    <aside id="main-sidebar" class="w-full md:w-80 bg-white shadow-2xl flex flex-col z-50 overflow-hidden border-r border-slate-200 transition-all duration-300 max-h-[50vh] md:max-h-screen md:h-full">
+        <div class="p-6 border-b border-slate-200 hidden md:block">
+            <h1 class="text-xl font-black text-slate-900 tracking-tighter text-center uppercase">Studio Pro</h1>
+        </div>
+
+        <div class="flex-1 overflow-y-auto flex flex-col">
+            <!-- Projecten Trigger Knop -->
+            <div class="p-4 border-b border-slate-100">
+                <button onclick="toggleProjectDrawer()" id="btn-toggle-projects" class="w-full flex items-center justify-between p-3 bg-slate-900 text-white rounded-2xl shadow-xl hover:bg-black transition-all group">
+                    <div class="flex items-center gap-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-400"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+                        <span class="text-[10px] font-black tracking-widest uppercase">Projecten</span>
+                    </div>
+                    <span id="project-count" class="bg-blue-600 text-[10px] px-2 py-0.5 rounded-full font-black">0</span>
+                </button>
+            </div>
+
+            <!-- Bibliotheek Sectie -->
+            <div class="p-4 bg-slate-50 flex-1">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 mb-4 block">Bibliotheek</span>
+                <div class="grid grid-cols-2 gap-3" id="tile-grid"></div>
+            </div>
+        </div>
+
+        <div class="p-4 md:p-6 bg-white border-t border-slate-200 space-y-3">
+            <div class="flex p-1 bg-slate-100 rounded-xl">
+                <button id="format-png" onclick="setExportFormat('png')" class="flex-1 py-1.5 text-[10px] font-black rounded-lg bg-white shadow-sm transition-all">PNG</button>
+                <button id="format-jpg" onclick="setExportFormat('jpg')" class="flex-1 py-1.5 text-[10px] font-black text-slate-500 transition-all">JPG</button>
+            </div>
+            
+            <button id="btn-save" class="w-full bg-slate-900 hover:bg-black text-white font-black py-3 rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2">
+                <span id="save-text" class="text-[10px] uppercase">Exporteer PNG</span>
+            </button>
+            
+            <button id="btn-reset" class="w-full text-slate-400 hover:text-red-600 font-bold text-[9px] uppercase tracking-widest transition-colors">
+                Nieuw Canvas
+            </button>
+        </div>
+    </aside>
+
+    <main class="flex-1 relative overflow-hidden flex flex-col">
+        <div id="viewport">
+            <div id="canvas-wrapper"></div>
+        </div>
+
+        <!-- Zwevende Laag- & Diepte-regeling balk -->
+        <div id="layer-control-bar" class="absolute bottom-20 md:bottom-8 left-1/2 -translate-x-1/2 hidden flex items-center gap-2 bg-slate-900/95 backdrop-blur-md p-3 px-5 rounded-2xl shadow-2xl z-40 border border-slate-700 max-w-[90vw] overflow-x-auto">
+            <span id="active-tile-label" class="text-[10px] font-black text-slate-400 uppercase tracking-widest border-r border-slate-800 pr-4 mr-2 shrink-0">Tegel</span>
+            
+            <div class="flex items-center gap-1">
+                <button onclick="moveSelectedToBack()" title="Helemaal naar achtergrond" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-[9px] uppercase tracking-wider px-3 py-2 rounded-lg transition-all">Onderop</button>
+                <button onclick="moveSelectedDown()" title="Eén stap naar achteren" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-[9px] uppercase tracking-wider px-3 py-2 rounded-lg transition-all">Omlaag</button>
+                <button onclick="moveSelectedUp()" title="Eén stap naar voren" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-[9px] uppercase tracking-wider px-3 py-2 rounded-lg transition-all">Omhoog</button>
+                <button onclick="moveSelectedToFront()" title="Helemaal naar voorgrond" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-[9px] uppercase tracking-wider px-3 py-2 rounded-lg transition-all">Bovenop</button>
+            </div>
+        </div>
+        
+        <div class="absolute bottom-6 right-6 md:bottom-8 md:left-8 flex items-center gap-3 bg-white/10 backdrop-blur-md p-2.5 px-4 rounded-2xl shadow-2xl z-30 border border-white/10">
+            <button onclick="adjustZoom(-0.1)" class="font-black text-lg text-white hover:text-blue-400 transition-colors">−</button>
+            <span id="zoom-display" class="font-mono font-black text-white text-xs min-w-[3rem] text-center">30%</span>
+            <button onclick="adjustZoom(0.1)" class="font-black text-lg text-white hover:text-blue-400 transition-colors">+</button>
+        </div>
+    </main>
+
+    <script>
+        const tileLibrary = document.getElementById('tile-grid');
+        const viewport = document.getElementById('viewport');
+        const wrapper = document.getElementById('canvas-wrapper');
+        const staging = document.getElementById('export-staging');
+        const zoomDisplay = document.getElementById('zoom-display');
+        const saveText = document.getElementById('save-text');
+        const projectList = document.getElementById('project-list');
+        const projectDrawer = document.getElementById('project-drawer');
+        const saveModal = document.getElementById('save-modal');
+        const nameInput = document.getElementById('project-name-input');
+        const projectCount = document.getElementById('project-count');
+        const resizeHandle = document.getElementById('project-resize-handle');
+        const mainSidebar = document.getElementById('main-sidebar');
+
+        const tileNames = [
+            "A.gif", "B.gif", "C.gif", "D.gif", "E.gif", "F.gif", "G.gif", "H.gif",
+            "I.gif", "J.gif", "K.gif", "L.gif", "M.gif", "N.gif", "O.gif", "P.gif",
+            "Q.gif", "R.gif", "S.gif", "T.gif", "U.gif", "V.gif", "W.gif", "X.gif",
+            "Y.gif", "Z.gif",
+            "1.gif", "2.gif", "3.gif", "4.gif", "5.gif", "6.gif", "7.gif", "8.gif",
+            "9.gif", "10.gif", "11.gif", "12.gif", "13.gif", "14.gif", "15.gif", "16.gif",
+            "17.gif", "18.gif", "19.gif", "20.gif", "21.gif", "22.gif", "23.gif", "24.gif",
+            "25.gif", "26.gif", "27.gif", "28.gif", "29.gif", "30.gif", "31.gif", "32.gif",
+            "33.gif", "34.gif", "35.gif", "36.gif"
+        ];
+
+        const tileAssets = {};
+        tileNames.forEach(name => {
+            tileAssets[name] = `./assets/${name}`;
+        });
+
+        let placedTiles = [];
+        let selectedTileId = null;
+        let zoom = 0.3; 
+        let panX = 0, panY = 0;
+        let exportFormat = 'png';
+        let isDraggingTile = false;
+        let dragTarget = null;
+        let dragOffset = { x: 0, y: 0 };
+        let isPanning = false;
+        let startPan = { x: 0, y: 0 };
+
+        // --- RESIZE LOGIC ---
+        let isResizing = false;
+        resizeHandle.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            document.body.style.cursor = 'col-resize';
+            projectDrawer.style.transition = 'none'; 
+            e.preventDefault();
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            const newWidth = e.clientX - projectDrawer.getBoundingClientRect().left;
+            if (newWidth > 150 && newWidth < 800) {
+                projectDrawer.style.width = `${newWidth}px`;
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                document.body.style.cursor = 'default';
+                projectDrawer.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+            }
+        });
+
+        // --- MOBILE SIDEBAR TOGGLE ---
+        function toggleSidebar() {
+            if (mainSidebar.classList.contains('hidden')) {
+                mainSidebar.classList.remove('hidden');
+            } else {
+                mainSidebar.classList.add('hidden');
+            }
+        }
+
+        // --- PROJECT MANAGEMENT ---
+        let currentProjectName = null;
+
+        function toggleProjectDrawer() {
+            projectDrawer.classList.toggle('open');
+        }
+
+        function saveStateToLocal(isAutoSave = true) {
+            const state = { placedTiles, zoom, panX, panY, currentProjectName };
+            localStorage.setItem('eldorado_active_session', JSON.stringify(state));
+        }
+
+        function loadStateFromLocal() {
+            const saved = localStorage.getItem('eldorado_active_session');
+            if (saved) {
+                const data = JSON.parse(saved);
+                placedTiles = data.placedTiles || [];
+                zoom = data.zoom || 0.3;
+                panX = data.panX || 0;
+                panY = data.panY || 0;
+                currentProjectName = data.currentProjectName || null;
+                return true;
+            }
+            return false;
+        }
+
+        function getAllProjects() {
+            const projects = localStorage.getItem('eldorado_saved_projects');
+            return projects ? JSON.parse(projects) : {};
+        }
+
+        function renderProjectList() {
+            const projects = getAllProjects();
+            projectList.innerHTML = '';
+            
+            const names = Object.keys(projects).sort();
+            projectCount.textContent = names.length;
+
+            if (names.length === 0) {
+                projectList.innerHTML = '<p class="text-[10px] text-slate-300 italic px-2 py-10 text-center uppercase tracking-widest font-bold">Leeg</p>';
+                return;
+            }
+
+            names.forEach(name => {
+                const div = document.createElement('div');
+                div.className = `flex items-center justify-between p-2 px-3 rounded-lg transition-all cursor-pointer group ${currentProjectName === name ? 'bg-blue-600 text-white shadow-md' : 'bg-white hover:bg-slate-100 border border-slate-100'}`;
+                div.innerHTML = `
+                    <div class="flex flex-col overflow-hidden flex-1" onclick="loadProject('${name}')">
+                        <span class="text-[10px] font-bold truncate tracking-tight uppercase">${name}</span>
+                    </div>
+                    <button onclick="deleteProject('${name}', event)" class="p-1 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg>
+                    </button>
+                `;
+                projectList.appendChild(div);
+            });
+        }
+
+        function openSaveModal() {
+            nameInput.value = currentProjectName || '';
+            saveModal.classList.remove('hidden');
+            nameInput.focus();
+        }
+
+        function closeSaveModal() {
+            saveModal.classList.add('hidden');
+        }
+
+        function confirmSaveProject() {
+            const name = nameInput.value.trim();
+            if (!name) return;
+
+            const projects = getAllProjects();
+            projects[name] = {
+                placedTiles: JSON.parse(JSON.stringify(placedTiles)),
+                zoom, panX, panY,
+                timestamp: Date.now()
+            };
+            
+            localStorage.setItem('eldorado_saved_projects', JSON.stringify(projects));
+            currentProjectName = name;
+            saveStateToLocal();
+            renderProjectList();
+            closeSaveModal();
+        }
+
+        function loadProject(name) {
+            const projects = getAllProjects();
+            const p = projects[name];
+            if (p) {
+                placedTiles = JSON.parse(JSON.stringify(p.placedTiles));
+                zoom = p.zoom || 0.3;
+                panX = p.panX || 0;
+                panY = p.panY || 0;
+                currentProjectName = name;
+                
+                selectedTileId = null;
+                renderCanvas();
+                renderLibrary();
+                updateTransform();
+                saveStateToLocal();
+                renderProjectList();
+                toggleProjectDrawer();
+            }
+        }
+
+        function deleteProject(name, e) {
+            e.stopPropagation();
+            if (!confirm(`Project "${name}" definitief verwijderen?`)) return;
+
+            const projects = getAllProjects();
+            delete projects[name];
+            localStorage.setItem('eldorado_saved_projects', JSON.stringify(projects));
+            
+            if (currentProjectName === name) currentProjectName = null;
+            saveStateToLocal();
+            renderProjectList();
+        }
+
+        // --- CORE STUDIO LOGIC ---
+        window.onload = () => {
+            const hasSession = loadStateFromLocal();
+            renderLibrary();
+            renderProjectList();
+            if (!hasSession) {
+                centerCanvas();
+            } else {
+                updateTransform();
+                renderCanvas();
+            }
+            
+            if (window.innerWidth < 768) {
+                mainSidebar.classList.add('hidden');
+            }
+        };
+
+        function centerCanvas() {
+            const vRect = viewport.getBoundingClientRect();
+            panX = vRect.width / 2;
+            panY = vRect.height / 2;
+            updateTransform();
+        }
+
+        function setExportFormat(f) {
+            exportFormat = f;
+            saveText.textContent = `Exporteer ${f.toUpperCase()}`;
+            document.getElementById('format-png').className = f === 'png' ? 'flex-1 py-1.5 text-[10px] font-black rounded-lg bg-white shadow-sm transition-all' : 'flex-1 py-1.5 text-[10px] font-black text-slate-500 transition-all';
+            document.getElementById('format-jpg').className = f === 'jpg' ? 'flex-1 py-1.5 text-[10px] font-black rounded-lg bg-white shadow-sm transition-all' : 'flex-1 py-1.5 text-[10px] font-black text-slate-500 transition-all';
+        }
+
+        function renderLibrary() {
+            tileLibrary.innerHTML = '';
+            tileNames.forEach((fileName, index) => {
+                const isUsed = checkTileUsage(fileName, index, tileNames);
+                const container = document.createElement('div');
+                container.className = `sidebar-item rounded-xl shadow-sm border p-2 cursor-pointer ${isUsed ? 'used' : ''}`;
+                container.innerHTML = `
+                    <div class="aspect-square flex items-center justify-center overflow-hidden">
+                        <img src="${tileAssets[fileName]}" class="max-w-full max-h-full object-contain" 
+                             onerror="this.style.display='none'; this.parentElement.innerHTML='<span class=\'text-[8px] text-slate-400 font-bold uppercase\'>${fileName.split('.')[0]}</span>'" 
+                             style="image-rendering: pixelated;">
+                    </div>
+                `;
+                if (!isUsed) container.onclick = () => {
+                    addTile(fileName);
+                    if (window.innerWidth < 768) toggleSidebar(); 
+                };
+                tileLibrary.appendChild(container);
+            });
+        }
+
+        function checkTileUsage(fileName, index, list) {
+            if (placedTiles.some(pt => pt.id === fileName)) return true;
+            let partnerIndex = (index % 2 === 0) ? index + 1 : index - 1;
+            if (partnerIndex >= 0 && partnerIndex < list.length) {
+                const partnerName = list[partnerIndex];
+                if (placedTiles.some(pt => pt.id === partnerName)) return true;
+            }
+            return false;
+        }
+
+        function addTile(fileName) {
+            const viewRect = viewport.getBoundingClientRect();
+            const centerX = (-panX + (viewRect.width / 2)) / zoom;
+            const centerY = (-panY + (viewRect.height / 2)) / zoom;
+
+            const instId = 'inst_' + Math.random().toString(36).substr(2, 9);
+            placedTiles.push({
+                id: fileName,
+                instanceId: instId,
+                x: Math.round(centerX),
+                y: Math.round(centerY),
+                rotation: 0
+            });
+            selectedTileId = instId;
+            renderCanvas();
+            renderLibrary();
+            saveStateToLocal();
+        }
+
+        // --- UNIFIED CONTROLS (POINTER EVENTS) ---
+        viewport.addEventListener('pointerdown', (e) => {
+            if (e.target === viewport || e.target === wrapper) {
+                selectedTileId = null;
+                renderCanvas();
+            }
+        });
+
+        // --- DEPT/LAAG MANAGEMENT ---
+        function moveSelectedToFront() {
+            if (!selectedTileId) return;
+            const idx = placedTiles.findIndex(t => t.instanceId === selectedTileId);
+            if (idx === -1 || idx === placedTiles.length - 1) return;
+            const [tile] = placedTiles.splice(idx, 1);
+            placedTiles.push(tile);
+            renderCanvas();
+            saveStateToLocal();
+        }
+
+        function moveSelectedToBack() {
+            if (!selectedTileId) return;
+            const idx = placedTiles.findIndex(t => t.instanceId === selectedTileId);
+            if (idx === -1 || idx === 0) return;
+            const [tile] = placedTiles.splice(idx, 1);
+            placedTiles.unshift(tile);
+            renderCanvas();
+            saveStateToLocal();
+        }
+
+        function moveSelectedUp() {
+            if (!selectedTileId) return;
+            const idx = placedTiles.findIndex(t => t.instanceId === selectedTileId);
+            if (idx === -1 || idx === placedTiles.length - 1) return;
+            const temp = placedTiles[idx];
+            placedTiles[idx] = placedTiles[idx + 1];
+            placedTiles[idx + 1] = temp;
+            renderCanvas();
+            saveStateToLocal();
+        }
+
+        function moveSelectedDown() {
+            if (!selectedTileId) return;
+            const idx = placedTiles.findIndex(t => t.instanceId === selectedTileId);
+            if (idx === -1 || idx === 0) return;
+            const temp = placedTiles[idx];
+            placedTiles[idx] = placedTiles[idx - 1];
+            placedTiles[idx - 1] = temp;
+            renderCanvas();
+            saveStateToLocal();
+        }
+
+        function renderCanvas() {
+            wrapper.innerHTML = '';
+            placedTiles.forEach(tile => {
+                const isSelected = tile.instanceId === selectedTileId;
+                const el = document.createElement('div');
+                el.className = `tile-placed ${isSelected ? 'is-selected' : ''}`;
+                el.style.left = `${tile.x}px`;
+                el.style.top = `${tile.y}px`;
+                el.style.transform = `rotate(${tile.rotation}deg)`;
+                el.dataset.id = tile.instanceId;
+                el.innerHTML = `
+                    <img src="${tileAssets[tile.id]}" draggable="false" style="pointer-events: none;">
+                    <button class="control-btn btn-rotate" onpointerdown="event.stopPropagation()" onclick="rotateTile('${tile.instanceId}', event)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+                    </button>
+                    <button class="control-btn btn-delete" onpointerdown="event.stopPropagation()" onclick="removeTile('${tile.instanceId}', event)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg>
+                    </button>
+                `;
+                
+                el.onpointerdown = (e) => {
+                    if (e.button === 2) return;
+                    selectedTileId = tile.instanceId;
+                    renderCanvas();
+                    startDrag(e, tile.instanceId);
+                };
+                
+                wrapper.appendChild(el);
+            });
+
+            // Update zwevende laagbalk
+            const bar = document.getElementById('layer-control-bar');
+            const label = document.getElementById('active-tile-label');
+            if (selectedTileId) {
+                bar.classList.remove('hidden');
+                const activeTile = placedTiles.find(t => t.instanceId === selectedTileId);
+                if (activeTile) {
+                    label.textContent = `Tegel: ${activeTile.id.replace('.gif', '')}`;
+                }
+            } else {
+                bar.classList.add('hidden');
+            }
+        }
+
+        // Symmetrie van een hexagon vereist stappen van 60 graden
+        function rotateTile(id, e) {
+            if(e) { e.preventDefault(); e.stopPropagation(); }
+            const t = placedTiles.find(x => x.instanceId === id);
+            if (t) { 
+                t.rotation = (t.rotation + 60) % 360; 
+                renderCanvas(); 
+                saveStateToLocal();
+            }
+        }
+
+        function removeTile(id, e) {
+            if(e) { e.preventDefault(); e.stopPropagation(); }
+            placedTiles = placedTiles.filter(x => x.instanceId !== id);
+            if (selectedTileId === id) selectedTileId = null;
+            renderCanvas();
+            renderLibrary();
+            saveStateToLocal();
+        }
+
+        function updateTransform() {
+            wrapper.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+            zoomDisplay.textContent = `${Math.round(zoom * 100)}%`;
+        }
+
+        function adjustZoom(delta, cx, cy) {
+            const oldZoom = zoom;
+            zoom = Math.min(Math.max(0.1, zoom + delta), 4.0);
+            const r = viewport.getBoundingClientRect();
+            const mx = cx !== undefined ? cx - r.left : r.width / 2;
+            const my = cy !== undefined ? cy - r.top : r.height / 2;
+            panX = mx - (mx - panX) * (zoom / oldZoom);
+            panY = my - (my - panY) * (zoom / oldZoom);
+            updateTransform();
+            saveStateToLocal();
+        }
+
+        // Slepen van tegels met pure, uiterst soepele pixelvrijheid (geen foutgevoelig snappen meer)
+        function startDrag(e, id) {
+            isDraggingTile = true;
+            dragTarget = placedTiles.find(x => x.instanceId === id);
+            const el = document.querySelector(`[data-id="${id}"]`);
+            const r = el.getBoundingClientRect();
+            
+            dragOffset.x = (e.clientX - r.left) / zoom;
+            dragOffset.y = (e.clientY - r.top) / zoom;
+            el.classList.add('tile-active');
+            
+            const move = (me) => {
+                const vr = viewport.getBoundingClientRect();
+                let targetX = (me.clientX - vr.left - panX) / zoom - dragOffset.x;
+                let targetY = (me.clientY - vr.top - panY) / zoom - dragOffset.y;
+                
+                dragTarget.x = Math.round(targetX);
+                dragTarget.y = Math.round(targetY);
+                
+                el.style.left = `${dragTarget.x}px`;
+                el.style.top = `${dragTarget.y}px`;
+            };
+            
+            const up = () => {
+                isDraggingTile = false;
+                el.classList.remove('tile-active');
+                window.removeEventListener('pointermove', move);
+                window.removeEventListener('pointerup', up);
+                saveStateToLocal();
+            };
+            
+            window.addEventListener('pointermove', move);
+            window.addEventListener('pointerup', up);
+        }
+
+        // Pannen (Scherm verschuiven)
+        let isSpace = false;
+        window.onkeydown = (e) => { 
+            if (e.code === 'Space') isSpace = true;
+            if (selectedTileId && (e.key === 'Delete' || e.key === 'Backspace')) removeTile(selectedTileId);
+        };
+        window.onkeyup = (e) => { if (e.code === 'Space') isSpace = false; };
+
+        viewport.addEventListener('pointerdown', (e) => {
+            const isBackground = (e.target === viewport || e.target === wrapper);
+            const isMiddleClick = (e.button === 1);
+            const isSpacePan = (e.button === 0 && isSpace);
+            const isTouchPan = (e.pointerType === 'touch' && isBackground);
+            const isMouseBackgroundPan = (e.button === 0 && isBackground);
+
+            if (isMiddleClick || isSpacePan || isTouchPan || isMouseBackgroundPan) {
+                isPanning = true; 
+                startPan = { x: e.clientX - panX, y: e.clientY - panY };
+                viewport.classList.add('panning');
+                
+                const move = (me) => { 
+                    panX = me.clientX - startPan.x; 
+                    panY = me.clientY - startPan.y; 
+                    updateTransform(); 
+                };
+                
+                const up = () => { 
+                    isPanning = false; 
+                    viewport.classList.remove('panning'); 
+                    window.removeEventListener('pointermove', move); 
+                    window.removeEventListener('pointerup', up); 
+                    saveStateToLocal();
+                };
+                
+                window.addEventListener('pointermove', move);
+                window.addEventListener('pointerup', up);
+            }
+        });
+
+        viewport.onwheel = (e) => { if (e.ctrlKey) { e.preventDefault(); adjustZoom(e.deltaY > 0 ? -0.1 : 0.1, e.clientX, e.clientY); } };
+
+        document.getElementById('btn-reset').onclick = () => { 
+            if (!confirm('Nieuw canvas openen? Onopgeslagen wijzigingen in het huidige project gaan verloren.')) return;
+            placedTiles = []; 
+            selectedTileId = null; 
+            currentProjectName = null;
+            renderCanvas(); 
+            renderLibrary(); 
+            centerCanvas();
+            renderProjectList();
+            saveStateToLocal();
+        };
+        
+        document.getElementById('btn-save').onclick = () => {
+            if (placedTiles.length === 0) return;
+            const oldSelected = selectedTileId;
+            selectedTileId = null;
+            renderCanvas();
+
+            setTimeout(() => {
+                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                placedTiles.forEach(t => {
+                    const el = document.querySelector(`[data-id="${t.instanceId}"]`);
+                    // Gebruik de werkelijke breedte/hoogte van de samengestelde tegel
+                    const w = el ? el.offsetWidth : 100;
+                    const h = el ? el.offsetHeight : 100;
+                    const diagonal = Math.sqrt(w*w + h*h);
+                    if (t.x - diagonal/2 < minX) minX = t.x - diagonal/2;
+                    if (t.y - diagonal/2 < minY) minY = t.y - diagonal/2;
+                    if (t.x + w + diagonal/2 > maxX) maxX = t.x + w + diagonal/2;
+                    if (t.y + h + diagonal/2 > maxY) maxY = t.y + h + diagonal/2;
+                });
+
+                const padding = 60;
+                const finalW = (maxX - minX) + (padding * 2);
+                const finalH = (maxY - minY) + (padding * 2);
+
+                staging.innerHTML = '';
+                staging.style.width = finalW + 'px';
+                staging.style.height = finalH + 'px';
+                staging.style.backgroundColor = exportFormat === 'jpg' ? '#ffffff' : 'transparent';
+
+                placedTiles.forEach(t => {
+                    const el = document.querySelector(`[data-id="${t.instanceId}"]`);
+                    const w = el ? el.offsetWidth : 100;
+                    const h = el ? el.offsetHeight : 100;
+
+                    const clone = document.createElement('div');
+                    clone.style.position = 'absolute';
+                    clone.style.left = (t.x - minX + padding) + 'px';
+                    clone.style.top = (t.y - minY + padding) + 'px';
+                    clone.style.transform = `rotate(${t.rotation}deg)`;
+                    clone.style.imageRendering = 'pixelated';
+                    clone.style.width = w + 'px';
+                    clone.style.height = h + 'px';
+                    const img = document.createElement('img');
+                    img.src = tileAssets[t.id];
+                    img.style.display = 'block';
+                    img.style.width = w + 'px';
+                    img.style.height = h + 'px';
+                    clone.appendChild(img);
+                    staging.appendChild(clone);
+                });
+
+                html2canvas(staging, {
+                    backgroundColor: exportFormat === 'jpg' ? '#ffffff' : null,
+                    scale: 2,
+                    useCORS: true,
+                    logging: false
+                }).then(c => {
+                    const l = document.createElement('a'); 
+                    const mime = exportFormat === 'jpg' ? 'image/jpeg' : 'image/png';
+                    l.download = `tegel-export-${Date.now()}.${exportFormat}`; 
+                    l.href = c.toDataURL(mime, 1.0); 
+                    l.click();
+                    selectedTileId = oldSelected;
+                    renderCanvas();
+                });
+            }, 100);
+        };
+    </script>
+</body>
+</html>
