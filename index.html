@@ -58,14 +58,13 @@
 
         .tile-placed.is-selected {
             border-color: rgba(59, 130, 246, 0.8);
-            z-index: 50;
             filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.3));
         }
 
         .tile-placed .control-btn {
             display: none;
             position: absolute;
-            z-index: 120;
+            z-index: 220;
             color: white;
             border-radius: 50%;
             align-items: center;
@@ -103,7 +102,7 @@
         }
 
         .tile-active {
-            z-index: 100 !important;
+            z-index: 200 !important;
             cursor: move;
         }
 
@@ -116,12 +115,6 @@
         .sidebar-item:hover:not(.used) {
             border-color: #3b82f6;
             transform: translateY(-2px);
-        }
-
-        .sidebar-item.used {
-            filter: grayscale(100%) brightness(0.5) opacity(0.15);
-            pointer-events: none;
-            background-color: #1e293b;
         }
 
         #export-staging {
@@ -211,7 +204,7 @@
 
     <div id="export-staging"></div>
 
-    <!-- Custom Toast Notificatie (vervangt lelijke alerts) -->
+    <!-- Custom Toast Notificatie -->
     <div id="custom-toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-[200] hidden items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl border text-xs font-bold transition-all"></div>
 
     <!-- Hidden File Input voor Import -->
@@ -266,6 +259,44 @@
         </div>
     </div>
 
+    <!-- Manifest Modal -->
+    <div id="manifest-modal" class="modal-overlay fixed inset-0 z-[110] hidden flex items-center justify-center p-6">
+        <div class="bg-white w-full max-w-md rounded-[2rem] p-8 shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+                <h3 class="text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-blue-600"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10M6 10h10"/></svg>
+                    Kaart Manifest
+                </h3>
+                <button onclick="closeManifestModal()" class="text-slate-400 hover:text-slate-900 transition-colors p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto space-y-4 pr-1 text-sm text-slate-700">
+                <div>
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Benodigde Grote Tegels</span>
+                    <div id="manifest-tegels-list" class="bg-slate-50 p-3 rounded-xl font-mono text-xs text-slate-800 flex flex-wrap gap-2">
+                        <!-- Dynamisch gevuld -->
+                    </div>
+                </div>
+                <div>
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Benodigde Blokkades</span>
+                    <div id="manifest-blokkades-list" class="bg-slate-50 p-3 rounded-xl font-mono text-xs text-slate-800 flex flex-wrap gap-2">
+                        <!-- Dynamisch gevuld -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex gap-3">
+                <button onclick="closeManifestModal()" class="flex-1 py-3 text-slate-400 font-bold hover:text-slate-600 transition-colors text-xs uppercase tracking-wider">Sluiten</button>
+                <button onclick="copyManifestToClipboard()" class="flex-1 bg-slate-900 hover:bg-black text-white font-black py-3 rounded-xl shadow-lg transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+                    Kopieer Lijst
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Mobiele Sidebar Toggle Knop -->
     <button onclick="toggleSidebar()" class="md:hidden fixed top-4 right-4 z-[60] bg-slate-900 text-white p-3 rounded-full shadow-2xl border border-slate-700">
         <svg id="sidebar-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -277,14 +308,19 @@
         </div>
 
         <div class="flex-1 overflow-y-auto flex flex-col">
-            <!-- Projecten Trigger Knop -->
-            <div class="p-4 border-b border-slate-100">
-                <button onclick="toggleProjectDrawer()" id="btn-toggle-projects" class="w-full flex items-center justify-between p-3 bg-slate-900 text-white rounded-2xl shadow-xl hover:bg-black transition-all group">
-                    <div class="flex items-center gap-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-400"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
-                        <span class="text-[10px] font-black tracking-widest uppercase">Projecten</span>
+            <!-- Projecten & Manifest Trigger Knoppen -->
+            <div class="p-4 border-b border-slate-100 flex gap-2">
+                <button onclick="toggleProjectDrawer()" id="btn-toggle-projects" class="flex-1 flex items-center justify-between p-3 bg-slate-900 text-white rounded-2xl shadow-xl hover:bg-black transition-all group">
+                    <div class="flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-400"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+                        <span class="text-[9px] font-black tracking-widest uppercase">Projecten</span>
                     </div>
-                    <span id="project-count" class="bg-blue-600 text-[10px] px-2 py-0.5 rounded-full font-black">0</span>
+                    <span id="project-count" class="bg-blue-600 text-[9px] px-1.5 py-0.5 rounded-full font-black">0</span>
+                </button>
+                
+                <button onclick="openManifestModal()" class="p-3 bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-800 rounded-2xl shadow-sm transition-all flex items-center justify-center gap-2" title="Kaart Manifest">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-slate-700"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10M6 10h10"/></svg>
+                    <span class="text-[9px] font-black tracking-widest uppercase text-slate-700">Manifest</span>
                 </button>
             </div>
 
@@ -359,7 +395,8 @@
             "9.gif", "10.gif", "11.gif", "12.gif", "13.gif", "14.gif", "15.gif", "16.gif",
             "17.gif", "18.gif", "19.gif", "20.gif", "21.gif", "22.gif", "23.gif", "24.gif",
             "25.gif", "26.gif", "27.gif", "28.gif", "29.gif", "30.gif", "31.gif", "32.gif",
-            "33.gif", "34.gif", "35.gif", "36.gif"
+            "33.gif", "34.gif", "35.gif", "36.gif",
+            "37.gif", "38.gif", "39.gif", "40.gif", "41.gif", "42.gif", "43.gif", "44.gif"
         ];
 
         const tileAssets = {};
@@ -387,6 +424,89 @@
             setTimeout(() => {
                 toast.classList.add('hidden');
             }, 3000);
+        }
+
+        // --- MANIFEST MODAL FUNCTIES ---
+        function getFriendlyName(fileName) {
+            const num = parseInt(fileName);
+            if (!isNaN(num) && num >= 37 && num <= 44) {
+                const blockadeNames = {
+                    37: "Jungle (1)",
+                    38: "Jungle (2)",
+                    39: "Jungle (3)",
+                    40: "Jungle (4)",
+                    41: "Munt (1)",
+                    42: "Munt (2)",
+                    43: "Water (1)",
+                    44: "Water (2)"
+                };
+                return `Blokkade ${blockadeNames[num] || num}`;
+            }
+            return `Tegel ${fileName.replace('.gif', '')}`;
+        }
+
+        function generateManifestData() {
+            const activeTegels = [];
+            const activeBlokkades = [];
+            
+            placedTiles.forEach(tile => {
+                const name = tile.id.replace('.gif', '');
+                const isBlk = parseInt(tile.id) >= 37;
+                if (isBlk) {
+                    activeBlokkades.push(getFriendlyName(tile.id));
+                } else {
+                    activeTegels.push(name);
+                }
+            });
+
+            return {
+                tegels: [...new Set(activeTegels)].sort(),
+                blokkades: [...new Set(activeBlokkades)].sort()
+            };
+        }
+
+        function openManifestModal() {
+            const data = generateManifestData();
+            
+            const tList = document.getElementById('manifest-tegels-list');
+            const bList = document.getElementById('manifest-blokkades-list');
+
+            tList.innerHTML = data.tegels.length > 0 
+                ? data.tegels.map(t => `<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-md font-bold">${t}</span>`).join('') 
+                : '<span class="text-slate-400 italic">Geen speltegels geplaatst</span>';
+
+            bList.innerHTML = data.blokkades.length > 0 
+                ? data.blokkades.map(b => `<span class="bg-amber-100 text-amber-800 px-2 py-1 rounded-md font-bold">${b}</span>`).join('') 
+                : '<span class="text-slate-400 italic">Geen blokkades geplaatst</span>';
+
+            document.getElementById('manifest-modal').classList.remove('hidden');
+        }
+
+        function closeManifestModal() {
+            document.getElementById('manifest-modal').classList.add('hidden');
+        }
+
+        function copyManifestToClipboard() {
+            const data = generateManifestData();
+            let text = "=== EL DORADO KAART MANIFEST ===\n\n";
+            text += "Grote Tegels:\n";
+            text += data.tegels.length > 0 ? data.tegels.join(", ") : "Geen";
+            text += "\n\nBlokkades:\n";
+            text += data.blokkades.length > 0 ? data.blokkades.join(", ") : "Geen";
+            text += "\n\nGemaakt met Tegel Studio Pro!";
+
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed'; 
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showCustomNotification('Manifest gekopieerd naar klembord!');
+            } catch (err) {
+                showCustomNotification('Kopiëren mislukt. Probeer het handmatig.', true);
+            }
+            document.body.removeChild(textarea);
         }
 
         // --- BACK-UP IMPORT & EXPORT LOGICA ---
@@ -422,13 +542,12 @@
                     }
                     
                     const existing = getAllProjects();
-                    // Merge de geïmporteerde projecten met de bestaande
                     const merged = { ...existing, ...importedData };
                     
                     localStorage.setItem('eldorado_saved_projects', JSON.stringify(merged));
                     renderProjectList();
                     showCustomNotification('Projecten succesvol geïmporteerd!');
-                    e.target.value = ''; // Reset input
+                    e.target.value = ''; 
                 } catch(err) {
                     showCustomNotification('Fout bij importeren: Ongeldig bestandsformaat.', true);
                     e.target.value = '';
@@ -624,35 +743,105 @@
             document.getElementById('format-jpg').className = f === 'jpg' ? 'flex-1 py-1.5 text-[10px] font-black rounded-lg bg-white shadow-sm transition-all' : 'flex-1 py-1.5 text-[10px] font-black text-slate-500 transition-all';
         }
 
+        function getPartnerName(fileName) {
+            const idx = tileNames.indexOf(fileName);
+            if (idx === -1 || idx >= 62) return null; // Blokkades hebben geen fysieke partners
+            const partnerIdx = (idx % 2 === 0) ? idx + 1 : idx - 1;
+            return tileNames[partnerIdx];
+        }
+
+        function checkTileStatus(fileName) {
+            if (placedTiles.some(pt => pt.id === fileName)) {
+                return 'self';
+            }
+            const partner = getPartnerName(fileName);
+            if (partner && placedTiles.some(pt => pt.id === partner)) {
+                return 'partner';
+            }
+            return 'free';
+        }
+
         function renderLibrary() {
             tileLibrary.innerHTML = '';
-            tileNames.forEach((fileName, index) => {
-                const isUsed = checkTileUsage(fileName, index, tileNames);
+            
+            // --- Sectie 1: Grote speltegels ---
+            const sectieTegels = document.createElement('div');
+            sectieTegels.className = 'col-span-2 mb-1';
+            sectieTegels.innerHTML = '<span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1 border-b border-slate-100 pb-1">Grote Speltegels (A-Z, 1-36)</span>';
+            tileLibrary.appendChild(sectieTegels);
+
+            const listTegels = tileNames.slice(0, 62);
+            listTegels.forEach((fileName) => {
+                const status = checkTileStatus(fileName);
                 const container = document.createElement('div');
-                container.className = `sidebar-item rounded-xl shadow-sm border p-2 cursor-pointer ${isUsed ? 'used' : ''}`;
+                
+                let statusClasses = 'bg-white border-slate-200';
+                let badgeHTML = '';
+                let clickAction = () => addTile(fileName);
+
+                if (status === 'self') {
+                    statusClasses = 'opacity-40 border-emerald-500 bg-emerald-50/10 pointer-events-none';
+                    badgeHTML = '<span class="absolute top-1 right-1 bg-emerald-600 text-white text-[7px] font-black px-1 rounded uppercase tracking-wider scale-90 origin-top-right">Op bord</span>';
+                    clickAction = null;
+                } else if (status === 'partner') {
+                    const partner = getPartnerName(fileName).replace('.gif', '');
+                    statusClasses = 'opacity-25 border-amber-500 bg-amber-50/5 pointer-events-none grayscale';
+                    badgeHTML = `<span class="absolute top-1 right-1 bg-amber-600 text-white text-[7px] font-black px-1 rounded uppercase tracking-wider scale-90 origin-top-right">KANT ${partner} ACTIEF</span>`;
+                    clickAction = null;
+                }
+
+                container.className = `sidebar-item relative rounded-xl shadow-sm border p-2 cursor-pointer ${statusClasses}`;
                 container.innerHTML = `
+                    ${badgeHTML}
                     <div class="aspect-square flex items-center justify-center overflow-hidden">
                         <img src="${tileAssets[fileName]}" class="max-w-full max-h-full object-contain" 
                              onerror="this.style.display='none'; this.parentElement.innerHTML='<span class=\'text-[8px] text-slate-400 font-bold uppercase\'>${fileName.split('.')[0]}</span>'" 
                              style="image-rendering: pixelated;">
                     </div>
                 `;
-                if (!isUsed) container.onclick = () => {
-                    addTile(fileName);
+                if (clickAction) container.onclick = () => {
+                    clickAction();
                     if (window.innerWidth < 768) toggleSidebar(); 
                 };
                 tileLibrary.appendChild(container);
             });
-        }
 
-        function checkTileUsage(fileName, index, list) {
-            if (placedTiles.some(pt => pt.id === fileName)) return true;
-            let partnerIndex = (index % 2 === 0) ? index + 1 : index - 1;
-            if (partnerIndex >= 0 && partnerIndex < list.length) {
-                const partnerName = list[partnerIndex];
-                if (placedTiles.some(pt => pt.id === partnerName)) return true;
-            }
-            return false;
+            // --- Sectie 2: Blokkades ---
+            const sectieBlokkades = document.createElement('div');
+            sectieBlokkades.className = 'col-span-2 mt-4 mb-1';
+            sectieBlokkades.innerHTML = '<span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1 border-b border-slate-100 pb-1">Blokkades (37-44)</span>';
+            tileLibrary.appendChild(sectieBlokkades);
+
+            const listBlokkades = tileNames.slice(62);
+            listBlokkades.forEach((fileName) => {
+                const isPlaced = placedTiles.some(pt => pt.id === fileName);
+                const container = document.createElement('div');
+                
+                let statusClasses = 'bg-white border-slate-200';
+                let badgeHTML = '';
+                let clickAction = () => addTile(fileName);
+
+                if (isPlaced) {
+                    statusClasses = 'opacity-40 border-emerald-500 bg-emerald-50/10 pointer-events-none';
+                    badgeHTML = '<span class="absolute top-1 right-1 bg-emerald-600 text-white text-[7px] font-black px-1 rounded uppercase tracking-wider scale-90 origin-top-right">Op bord</span>';
+                    clickAction = null;
+                }
+
+                container.className = `sidebar-item relative rounded-xl shadow-sm border p-2 cursor-pointer ${statusClasses}`;
+                container.innerHTML = `
+                    ${badgeHTML}
+                    <div class="aspect-square flex items-center justify-center overflow-hidden">
+                        <img src="${tileAssets[fileName]}" class="max-w-full max-h-full object-contain" 
+                             onerror="this.style.display='none'; this.parentElement.innerHTML='<span class=\'text-[8px] text-slate-400 font-bold uppercase\'>${getFriendlyName(fileName)}</span>'" 
+                             style="image-rendering: pixelated;">
+                    </div>
+                `;
+                if (clickAction) container.onclick = () => {
+                    clickAction();
+                    if (window.innerWidth < 768) toggleSidebar(); 
+                };
+                tileLibrary.appendChild(container);
+            });
         }
 
         function addTile(fileName) {
@@ -660,13 +849,16 @@
             const centerX = (-panX + (viewRect.width / 2)) / zoom;
             const centerY = (-panY + (viewRect.height / 2)) / zoom;
 
+            const isBlockade = parseInt(fileName) >= 37;
             const instId = 'inst_' + Math.random().toString(36).substr(2, 9);
+            
             placedTiles.push({
                 id: fileName,
                 instanceId: instId,
                 x: Math.round(centerX),
                 y: Math.round(centerY),
-                rotation: 0
+                rotation: 0,
+                isBlockade: isBlockade
             });
             selectedTileId = instId;
             renderCanvas();
@@ -727,13 +919,17 @@
 
         function renderCanvas() {
             wrapper.innerHTML = '';
-            placedTiles.forEach(tile => {
+            placedTiles.forEach((tile, idx) => {
                 const isSelected = tile.instanceId === selectedTileId;
                 const el = document.createElement('div');
                 el.className = `tile-placed ${isSelected ? 'is-selected' : ''}`;
                 el.style.left = `${tile.x}px`;
                 el.style.top = `${tile.y}px`;
                 el.style.transform = `rotate(${tile.rotation}deg)`;
+                
+                // Blokkades staan altijd bovenop andere tegels
+                el.style.zIndex = tile.isBlockade ? (100 + idx) : idx;
+                
                 el.dataset.id = tile.instanceId;
                 el.innerHTML = `
                     <img src="${tileAssets[tile.id]}" draggable="false" style="pointer-events: none;">
@@ -762,14 +958,13 @@
                 bar.classList.remove('hidden');
                 const activeTile = placedTiles.find(t => t.instanceId === selectedTileId);
                 if (activeTile) {
-                    label.textContent = `Tegel: ${activeTile.id.replace('.gif', '')}`;
+                    label.textContent = `${getFriendlyName(activeTile.id)}`;
                 }
             } else {
                 bar.classList.add('hidden');
             }
         }
 
-        // Symmetrie van een hexagon vereist stappen van 60 graden
         function rotateTile(id, e) {
             if(e) { e.preventDefault(); e.stopPropagation(); }
             const t = placedTiles.find(x => x.instanceId === id);
@@ -904,7 +1099,6 @@
                 let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
                 placedTiles.forEach(t => {
                     const el = document.querySelector(`[data-id="${t.instanceId}"]`);
-                    // Gebruik de werkelijke breedte/hoogte van de samengestelde tegel
                     const w = el ? el.offsetWidth : 100;
                     const h = el ? el.offsetHeight : 100;
                     const diagonal = Math.sqrt(w*w + h*h);
@@ -923,7 +1117,14 @@
                 staging.style.height = finalH + 'px';
                 staging.style.backgroundColor = exportFormat === 'jpg' ? '#ffffff' : 'transparent';
 
-                placedTiles.forEach(t => {
+                // Sorteren voor correcte stacking order tijdens export (blokkades op de voorgrond)
+                const sortedTilesForExport = [...placedTiles].sort((a, b) => {
+                    const aZ = a.isBlockade ? (100 + placedTiles.indexOf(a)) : placedTiles.indexOf(a);
+                    const bZ = b.isBlockade ? (100 + placedTiles.indexOf(b)) : placedTiles.indexOf(b);
+                    return aZ - bZ;
+                });
+
+                sortedTilesForExport.forEach(t => {
                     const el = document.querySelector(`[data-id="${t.instanceId}"]`);
                     const w = el ? el.offsetWidth : 100;
                     const h = el ? el.offsetHeight : 100;
