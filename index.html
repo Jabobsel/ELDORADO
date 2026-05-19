@@ -12,7 +12,7 @@
             font-family: 'Inter', sans-serif; 
             overflow: hidden; 
             background-color: #020617; 
-            touch-action: none; /* Voorkom standaard mobiel scrollen/zoomen */
+            touch-action: none; /* Voorkom standaard mobiel scrollen/zoomen van de pagina zelf */
         }
         
         #viewport {
@@ -349,19 +349,53 @@
     </button>
 
     <!-- Sidepanel / Bibliotheek -->
-    <aside id="main-sidebar" class="hidden md:flex flex-col w-full h-full md:w-80 fixed md:relative inset-0 md:inset-auto z-[150] md:z-50 bg-white shadow-2xl overflow-hidden border-r border-slate-200 shrink-0">
+    <aside id="main-sidebar" 
+           onpointerdown="event.stopPropagation()" 
+           ontouchstart="event.stopPropagation()" 
+           ontouchmove="event.stopPropagation()" 
+           ontouchend="event.stopPropagation()" 
+           class="hidden md:flex flex-col w-full h-full md:w-80 fixed md:relative inset-0 md:inset-auto z-[150] md:z-50 bg-white shadow-2xl overflow-hidden border-r border-slate-200 shrink-0" 
+           style="touch-action: pan-y !important;">
+        
         <!-- Desktop Resize Handle op de rechter rand -->
         <div id="sidebar-resize-handle" class="hidden md:block absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-500/20 active:bg-blue-500/40 transition-colors z-[60]"></div>
 
-        <!-- Mobiele sluitbalk bovenaan bibliotheek -->
-        <div class="p-4 border-b border-slate-200 flex items-center justify-between md:hidden bg-slate-50">
-            <span class="text-xs font-black text-slate-400 uppercase tracking-widest">Tegel Bibliotheek</span>
-            <button onclick="toggleSidebar()" class="text-slate-500 hover:text-slate-900 p-1">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
+        <!-- Mobiele sluitbalk bovenaan bibliotheek inclusief Uitbreidingen en Sluitknop (X) -->
+        <div class="p-4 border-b border-slate-200 flex flex-col gap-3 md:hidden bg-slate-900 text-white shadow-md">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-black uppercase tracking-widest text-slate-300">Tegel Bibliotheek</span>
+                <button onclick="toggleSidebar()" class="text-slate-400 hover:text-white p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            
+            <!-- Mobiele Uitbreidingen Toggles in de header bar -->
+            <div class="flex items-center justify-between gap-1 bg-slate-950 p-2 rounded-xl border border-slate-800">
+                <div class="flex items-center gap-1">
+                    <span class="text-[8px] font-black text-slate-400 uppercase tracking-tighter">😈 Demo</span>
+                    <label class="switch scale-75">
+                        <input type="checkbox" id="demons-toggle-mobile" onchange="toggleDemons(this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="flex items-center gap-1 border-l border-slate-800 pl-1.5">
+                    <span class="text-[8px] font-black text-slate-400 uppercase tracking-tighter">⚠️ Muisca</span>
+                    <label class="switch scale-75">
+                        <input type="checkbox" id="dangers-muisca-toggle-mobile" onchange="toggleDangersMuisca(this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="flex items-center gap-1 border-l border-slate-800 pl-1.5">
+                    <span class="text-[8px] font-black text-slate-400 uppercase tracking-tighter">🐉 Dragons</span>
+                    <label class="switch scale-75">
+                        <input type="checkbox" id="dragons-toggle-mobile" onchange="toggleDragons(this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
         </div>
 
-        <div class="flex-1 overflow-y-auto flex flex-col">
+        <div class="flex-1 overflow-hidden flex flex-col">
             <!-- Categorie Tabs -->
             <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/30">
                 <div class="flex flex-wrap gap-1.5 pb-1" id="category-tabs">
@@ -369,23 +403,23 @@
                 </div>
             </div>
 
-            <!-- Bibliotheek Grid Sectie -->
-            <div class="p-4 bg-slate-50 flex-1 overflow-y-auto">
+            <!-- Bibliotheek Grid Sectie (Scrollable op Android) -->
+            <div class="p-4 bg-slate-50 flex-1 overflow-y-auto" style="touch-action: pan-y !important; -webkit-overflow-scrolling: touch;">
                 <div class="grid grid-cols-2 gap-3" id="tile-grid"></div>
             </div>
         </div>
 
-        <!-- Onderste Paneel (Toggles & Export) -->
+        <!-- Onderste Paneel (Desktop Toggles & Export) -->
         <div class="p-4 md:p-6 bg-white border-t border-slate-200 space-y-4">
-            <!-- Uitbreidingen Toggles Paneel -->
-            <div class="space-y-2 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+            <!-- Uitbreidingen Toggles Paneel (Alleen zichtbaar op Desktop) -->
+            <div class="hidden md:block space-y-2 bg-slate-50 p-3 rounded-2xl border border-slate-100">
                 <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Uitbreidingen</span>
                 
                 <!-- Toggle Demonen -->
                 <div class="flex items-center justify-between">
                     <span class="text-[10px] font-bold text-slate-700 uppercase tracking-wider">😈 Hexen & Demonen</span>
                     <label class="switch scale-75">
-                        <input type="checkbox" id="demons-toggle" onchange="toggleDemons(this.checked)">
+                        <input type="checkbox" id="demons-toggle-desktop" onchange="toggleDemons(this.checked)">
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -394,7 +428,7 @@
                 <div class="flex items-center justify-between">
                     <span class="text-[10px] font-bold text-slate-700 uppercase tracking-wider">⚠️ Dangers & 🏺 Muisca</span>
                     <label class="switch scale-75">
-                        <input type="checkbox" id="dangers-muisca-toggle" onchange="toggleDangersMuisca(this.checked)">
+                        <input type="checkbox" id="dangers-muisca-toggle-desktop" onchange="toggleDangersMuisca(this.checked)">
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -403,7 +437,7 @@
                 <div class="flex items-center justify-between">
                     <span class="text-[10px] font-bold text-slate-700 uppercase tracking-wider">🐉 Dragons & Treasures</span>
                     <label class="switch scale-75">
-                        <input type="checkbox" id="dragons-toggle" onchange="toggleDragons(this.checked)">
+                        <input type="checkbox" id="dragons-toggle-desktop" onchange="toggleDragons(this.checked)">
                         <span class="slider"></span>
                     </label>
                 </div>
@@ -540,14 +574,13 @@
             return 'basisspel';
         }
 
+        // --- EXPANSIE SYNC SWITCH LOGICA ---
         function toggleDemons(isActive) {
             demonsActive = isActive;
-            document.getElementById('demons-toggle').checked = isActive;
-            if (isActive) {
-                showCustomNotification('Hexen & Demonen Actief (Blokkades 37 & 38 Ontgrendeld)');
-            } else {
-                showCustomNotification('Hexen & Demonen Gedeactiveerd.');
-            }
+            document.getElementById('demons-toggle-desktop').checked = isActive;
+            document.getElementById('demons-toggle-mobile').checked = isActive;
+            
+            showCustomNotification(isActive ? 'Hexen & Demonen Actief (Blokkades 37 & 38 Ontgrendeld)' : 'Hexen & Demonen Gedeactiveerd.');
             renderCategoryTabs();
             renderLibrary();
             saveStateToLocal();
@@ -555,12 +588,10 @@
 
         function toggleDangersMuisca(isActive) {
             dangersMuiscaActive = isActive;
-            document.getElementById('dangers-muisca-toggle').checked = isActive;
-            if (isActive) {
-                showCustomNotification('Dangers & Muisca Actief');
-            } else {
-                showCustomNotification('Dangers & Muisca Gedeactiveerd.');
-            }
+            document.getElementById('dangers-muisca-toggle-desktop').checked = isActive;
+            document.getElementById('dangers-muisca-toggle-mobile').checked = isActive;
+
+            showCustomNotification(isActive ? 'Dangers & Muisca Actief' : 'Dangers & Muisca Gedeactiveerd.');
             renderCategoryTabs();
             renderLibrary();
             saveStateToLocal();
@@ -568,12 +599,10 @@
 
         function toggleDragons(isActive) {
             dragonsActive = isActive;
-            document.getElementById('dragons-toggle').checked = isActive;
-            if (isActive) {
-                showCustomNotification('Dragons & Treasures Actief');
-            } else {
-                showCustomNotification('Dragons & Treasures Gedeactiveerd.');
-            }
+            document.getElementById('dragons-toggle-desktop').checked = isActive;
+            document.getElementById('dragons-toggle-mobile').checked = isActive;
+
+            showCustomNotification(isActive ? 'Dragons & Treasures Actief' : 'Dragons & Treasures Gedeactiveerd.');
             renderCategoryTabs();
             renderLibrary();
             saveStateToLocal();
@@ -641,6 +670,56 @@
                 isSidebarResizing = false;
                 document.body.style.cursor = 'default';
                 document.body.style.userSelect = '';
+                saveStateToLocal();
+            }
+        });
+
+        // --- ANDROID PINCH-TO-ZOOM TOUCH ENGINE ---
+        let touchStartDist = 0;
+        let initialZoom = 0.3;
+        let isPinchZooming = false;
+
+        viewport.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                isPinchZooming = true;
+                touchStartDist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                initialZoom = zoom;
+            }
+        });
+
+        viewport.addEventListener('touchmove', (e) => {
+            if (isPinchZooming && e.touches.length === 2) {
+                e.preventDefault(); // Voorkom herladen of verspringen van browser
+                const dist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                
+                // Midden berekenen tussen de twee touchpoints
+                const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+
+                const zoomFactor = dist / touchStartDist;
+                const targetZoom = Math.min(Math.max(0.1, initialZoom * zoomFactor), 4.0);
+                
+                const oldZoom = zoom;
+                zoom = targetZoom;
+                const r = viewport.getBoundingClientRect();
+                const mx = midX - r.left;
+                const my = midY - r.top;
+                panX = mx - (mx - panX) * (zoom / oldZoom);
+                panY = my - (my - panY) * (zoom / oldZoom);
+                
+                updateTransform();
+            }
+        });
+
+        viewport.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) {
+                isPinchZooming = false;
                 saveStateToLocal();
             }
         });
@@ -853,9 +932,15 @@
                 dangersMuiscaActive = data.dangersMuiscaActive || false;
                 dragonsActive = data.dragonsActive || false;
 
-                document.getElementById('demons-toggle').checked = demonsActive;
-                document.getElementById('dangers-muisca-toggle').checked = dangersMuiscaActive;
-                document.getElementById('dragons-toggle').checked = dragonsActive;
+                // Sync desktop elements
+                document.getElementById('demons-toggle-desktop').checked = demonsActive;
+                document.getElementById('dangers-muisca-toggle-desktop').checked = dangersMuiscaActive;
+                document.getElementById('dragons-toggle-desktop').checked = dragonsActive;
+
+                // Sync mobile elements
+                document.getElementById('demons-toggle-mobile').checked = demonsActive;
+                document.getElementById('dangers-muisca-toggle-mobile').checked = dangersMuiscaActive;
+                document.getElementById('dragons-toggle-mobile').checked = dragonsActive;
 
                 if (data.sidebarWidth && window.innerWidth >= 768) {
                     mainSidebar.style.width = data.sidebarWidth;
@@ -1123,6 +1208,7 @@
             saveStateToLocal();
         }
 
+        // --- DEPT/LAAG MANAGEMENT ---
         function moveSelectedUp() {
             if (!selectedTileId) return;
             const idx = placedTiles.findIndex(t => t.instanceId === selectedTileId);
