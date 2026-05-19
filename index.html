@@ -12,7 +12,7 @@
             font-family: 'Inter', sans-serif; 
             overflow: hidden; 
             background-color: #020617; 
-            touch-action: none; /* Voorkom standaard mobiel scrollen/zoomen van de pagina zelf */
+            /* touch-action is hier verwijderd zodat scrollen in de sidebar op Android native werkt */
         }
         
         #viewport {
@@ -21,7 +21,7 @@
             overflow: hidden;
             position: relative;
             cursor: grab;
-            touch-action: none;
+            touch-action: none; /* Alleen het canvas blokkeert standaard browser scrollgedrag */
         }
 
         #viewport.panning { cursor: grabbing; }
@@ -104,6 +104,10 @@
         .tile-active {
             z-index: 500 !important;
             cursor: move;
+        }
+
+        #main-sidebar {
+            touch-action: auto !important; /* Forceert soepel native scrollgedrag op Android */
         }
 
         .sidebar-item {
@@ -524,6 +528,9 @@
         let isPanning = false;
         let startPan = { x: 0, y: 0 };
 
+        // Globale touch-registratie voor multitouch bescherming
+        let activeTouches = 0;
+
         // --- EXPANSIE FILTER FUNCTIE ---
         function getCategoryForTile(fileName) {
             const name = fileName.replace('.gif', '');
@@ -644,6 +651,45 @@
             }
         });
 
+        // --- MULTITOUCH & PINCH GESTURES SECURITY ---
+        function cancelDragAndPan() {
+            if (isDraggingTile) {
+                isDraggingTile = false;
+                if (dragTarget) {
+                    const el = document.querySelector(`[data-id="${dragTarget.instanceId}"]`);
+                    if (el) el.classList.remove('tile-active');
+                }
+                dragTarget = null;
+            }
+            if (isPanning) {
+                isPanning = false;
+                viewport.classList.remove('panning');
+            }
+        }
+
+        window.addEventListener('touchstart', (e) => {
+            activeTouches = e.touches.length;
+            if (activeTouches > 1) {
+                // Direct de lopende versleep- of schuifactie stoppen als een tweede vinger het scherm raakt
+                cancelDragAndPan();
+            }
+        }, { passive: false });
+
+        window.addEventListener('touchend', (e) => {
+            activeTouches = e.touches.length;
+        });
+
+        window.addEventListener('touchcancel', (e) => {
+            activeTouches = e.touches.length;
+        });
+
+        // Voorkom dat de mobiele browser rubber-banded of herlaadt bij interactie op het canvas zelf
+        document.addEventListener('touchmove', function(e) {
+            if (viewport.contains(e.target)) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
         // --- ANDROID PINCH-TO-ZOOM TOUCH ENGINE ---
         let touchStartDist = 0;
         let initialZoom = 0.3;
@@ -662,7 +708,7 @@
 
         viewport.addEventListener('touchmove', (e) => {
             if (isPinchZooming && e.touches.length === 2) {
-                e.preventDefault(); // Voorkom herladen of verspringen van browser
+                e.preventDefault(); // Voorkom verspringen browser
                 const dist = Math.hypot(
                     e.touches[0].clientX - e.touches[1].clientX,
                     e.touches[0].clientY - e.touches[1].clientY
@@ -1127,6 +1173,7 @@
 
         // --- UNIFIED CONTROLS (POINTER EVENTS) ---
         viewport.addEventListener('pointerdown', (e) => {
+            if (e.pointerType === 'touch' && activeTouches > 1) return; // Geen acties bij multitouch contact
             if (e.target === viewport || e.target === wrapper) {
                 selectedTileId = null;
                 renderCanvas();
@@ -1210,6 +1257,7 @@
                 `;
                 
                 el.onpointerdown = (e) => {
+                    if (e.pointerType === 'touch' && activeTouches > 1) return; // Blokkeer multitouch selecties
                     if (e.button === 2) return;
                     selectedTileId = tile.instanceId;
                     renderCanvas();
@@ -1271,9 +1319,11 @@
 
         // Slepen van tegels met pure, uiterst soepele pixelvrijheid
         function startDrag(e, id) {
+            if (e.pointerType === 'touch' && activeTouches > 1) return; // Geen drag starten tijdens multitouch
             isDraggingTile = true;
             dragTarget = placedTiles.find(x => x.instanceId === id);
             const el = document.querySelector(`[data-id="${id}"]`);
+            if (!el) return;
             const r = el.getBoundingClientRect();
             
             dragOffset.x = (e.clientX - r.left) / zoom;
@@ -1281,6 +1331,7 @@
             el.classList.add('tile-active');
             
             const move = (me) => {
+                if (activeTouches > 1) { cancelDragAndPan(); return; } // Veiligheidsmaatregel voor multitouch zoom-inbreuk
                 const vr = viewport.getBoundingClientRect();
                 let targetX = (me.clientX - vr.left - panX) / zoom - dragOffset.x;
                 let targetY = (me.clientY - vr.top - panY) / zoom - dragOffset.y;
@@ -1313,6 +1364,7 @@
         window.onkeyup = (e) => { if (e.code === 'Space') isSpace = false; };
 
         viewport.addEventListener('pointerdown', (e) => {
+            if (e.pointerType === 'touch' && activeTouches > 1) return; // Geen pan-initiatie tijdens multitouch gebaren
             const isBackground = (e.target === viewport || e.target === wrapper);
             const isMiddleClick = (e.button === 1);
             const isSpacePan = (e.button === 0 && isSpace);
@@ -1325,6 +1377,7 @@
                 viewport.classList.add('panning');
                 
                 const move = (me) => { 
+                    if (activeTouches > 1) { cancelDragAndPan(); return; } // Abort direct als multitouch actief is
                     panX = me.clientX - startPan.x; 
                     panY = me.clientY - startPan.y; 
                     updateTransform(); 
