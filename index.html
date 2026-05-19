@@ -44,14 +44,14 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            /* Ware grootte behouden: geen geforceerde breedte/hoogte meer */
+            /* Ware grootte behouden: geen geforceerde breedte/hoogte */
             filter: drop-shadow(0 0 1px rgba(255,255,255,0.1));
             transition: border-color 0.15s ease, box-shadow 0.15s ease;
         }
 
         .tile-placed img {
             max-width: none;
-            /* Ware grootte behouden: geen geforceerde breedte/hoogte meer */
+            /* Ware grootte behouden */
             image-rendering: pixelated;
             display: block;
         }
@@ -211,6 +211,12 @@
 
     <div id="export-staging"></div>
 
+    <!-- Custom Toast Notificatie (vervangt lelijke alerts) -->
+    <div id="custom-toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-[200] hidden items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl border text-xs font-bold transition-all"></div>
+
+    <!-- Hidden File Input voor Import -->
+    <input type="file" id="import-file-input" class="hidden" accept=".json" onchange="importProjects(event)">
+
     <!-- Project Pop-up Paneel -->
     <div id="project-drawer">
         <!-- Resize Handle -->
@@ -222,10 +228,24 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
         </div>
+        
         <div id="project-list" class="flex-1 overflow-y-auto p-3 space-y-1.5 bg-slate-50/50">
             <!-- Projecten komen hier -->
         </div>
-        <div class="p-4 border-t border-slate-100">
+
+        <!-- Back-up & Herstel Sectie -->
+        <div class="p-3 bg-slate-100 border-t border-b border-slate-200 grid grid-cols-2 gap-2">
+            <button onclick="exportProjects()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 rounded-lg text-[9px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Exporteer Back-up
+            </button>
+            <button onclick="triggerImport()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 rounded-lg text-[9px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Importeer Back-up
+            </button>
+        </div>
+
+        <div class="p-4">
             <button onclick="openSaveModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-3 rounded-xl shadow-lg transition-all text-[10px] flex items-center justify-center gap-2 uppercase tracking-tight">
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                 Opslaan
@@ -358,6 +378,65 @@
         let isPanning = false;
         let startPan = { x: 0, y: 0 };
 
+        // --- CUSTOM TOAST NOTIFICATIE ---
+        function showCustomNotification(msg, isError = false) {
+            const toast = document.getElementById('custom-toast');
+            toast.textContent = msg;
+            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[200] flex bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl border text-xs font-bold transition-all ${isError ? 'border-red-500' : 'border-emerald-500'}`;
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+
+        // --- BACK-UP IMPORT & EXPORT LOGICA ---
+        function exportProjects() {
+            const projects = localStorage.getItem('eldorado_saved_projects');
+            if (!projects || projects === '{}') {
+                showCustomNotification('Er zijn geen projecten om te exporteren.', true);
+                return;
+            }
+            const blob = new Blob([projects], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `eldorado_back_up_${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showCustomNotification('Back-up succesvol gedownload!');
+        }
+
+        function triggerImport() {
+            document.getElementById('import-file-input').click();
+        }
+
+        function importProjects(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const importedData = JSON.parse(evt.target.result);
+                    if (typeof importedData !== 'object' || Array.isArray(importedData)) {
+                        throw new Error('Bestand is geen geldig projectenbestand.');
+                    }
+                    
+                    const existing = getAllProjects();
+                    // Merge de geïmporteerde projecten met de bestaande
+                    const merged = { ...existing, ...importedData };
+                    
+                    localStorage.setItem('eldorado_saved_projects', JSON.stringify(merged));
+                    renderProjectList();
+                    showCustomNotification('Projecten succesvol geïmporteerd!');
+                    e.target.value = ''; // Reset input
+                } catch(err) {
+                    showCustomNotification('Fout bij importeren: Ongeldig bestandsformaat.', true);
+                    e.target.value = '';
+                }
+            };
+            reader.readAsText(file);
+        }
+
         // --- RESIZE LOGIC ---
         let isResizing = false;
         resizeHandle.addEventListener('mousedown', (e) => {
@@ -476,6 +555,7 @@
             saveStateToLocal();
             renderProjectList();
             closeSaveModal();
+            showCustomNotification('Project opgeslagen!');
         }
 
         function loadProject(name) {
@@ -495,6 +575,7 @@
                 saveStateToLocal();
                 renderProjectList();
                 toggleProjectDrawer();
+                showCustomNotification(`Project "${name}" geladen!`);
             }
         }
 
@@ -509,6 +590,7 @@
             if (currentProjectName === name) currentProjectName = null;
             saveStateToLocal();
             renderProjectList();
+            showCustomNotification('Project verwijderd.');
         }
 
         // --- CORE STUDIO LOGIC ---
@@ -724,7 +806,7 @@
             saveStateToLocal();
         }
 
-        // Slepen van tegels met pure, uiterst soepele pixelvrijheid (geen foutgevoelig snappen meer)
+        // Slepen van tegels met pure, uiterst soepele pixelvrijheid
         function startDrag(e, id) {
             isDraggingTile = true;
             dragTarget = placedTiles.find(x => x.instanceId === id);
