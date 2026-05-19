@@ -129,76 +129,6 @@
             backdrop-filter: blur(4px);
         }
 
-        /* Project Pop-up styling */
-        #project-drawer {
-            position: absolute;
-            left: 24px; 
-            top: 80px;
-            bottom: 24px;
-            width: 300px;
-            min-width: 200px;
-            max-width: 800px;
-            background: white;
-            z-index: 40;
-            border-radius: 1.5rem;
-            box-shadow: 20px 0 50px rgba(0,0,0,0.3);
-            transform: translateX(-110%);
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.05s linear;
-            display: flex;
-            flex-direction: column;
-            border: 1px solid rgba(0,0,0,0.1);
-        }
-
-        #project-drawer.open {
-            transform: translateX(0);
-        }
-
-        /* Mobile overrides for project drawer position */
-        @media (max-width: 768px) {
-            #project-drawer {
-                left: 12px;
-                right: 12px;
-                top: 80px;
-                bottom: 80px;
-                width: auto !important;
-                max-width: none;
-                transform: translateY(-150%);
-            }
-            #project-drawer.open {
-                transform: translateY(0);
-            }
-            #project-resize-handle {
-                display: none !important;
-            }
-        }
-
-        /* Resize Handle */
-        #project-resize-handle {
-            position: absolute;
-            right: -4px;
-            top: 20px;
-            bottom: 20px;
-            width: 12px;
-            cursor: col-resize;
-            z-index: 41;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        #project-resize-handle::after {
-            content: '';
-            width: 4px;
-            height: 40px;
-            background: #e2e8f0;
-            border-radius: 2px;
-            transition: background 0.2s;
-        }
-
-        #project-resize-handle:hover::after {
-            background: #3b82f6;
-        }
-
         /* Custom Toggle Switch Standard */
         .switch {
             position: relative;
@@ -302,44 +232,46 @@
     <!-- Hidden File Input voor Import -->
     <input type="file" id="import-file-input" class="hidden" accept=".json" onchange="importProjects(event)">
 
-    <!-- Project Pop-up Paneel -->
-    <div id="project-drawer">
-        <!-- Resize Handle -->
-        <div id="project-resize-handle"></div>
+    <!-- Projecten Manager Modal (Geopend als Overlay net als Manifest) -->
+    <div id="project-modal" class="modal-overlay fixed inset-0 z-[110] hidden flex items-center justify-center p-6">
+        <div class="bg-white w-full max-w-md rounded-[2rem] p-8 shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+                <h3 class="text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-blue-600"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    Projectenbeheer
+                </h3>
+                <button onclick="toggleProjectDrawer()" class="text-slate-400 hover:text-slate-900 transition-colors p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            
+            <div id="project-list" class="flex-1 overflow-y-auto p-3 space-y-1.5 bg-slate-50/50 rounded-2xl mb-4">
+                <!-- Projecten komen hier -->
+            </div>
 
-        <div class="p-4 border-b border-slate-100 flex items-center justify-between">
-            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Opgeslagen Projecten</span>
-            <button onclick="toggleProjectDrawer()" class="text-slate-400 hover:text-slate-900 transition-colors p-1">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-            </button>
-        </div>
-        
-        <div id="project-list" class="flex-1 overflow-y-auto p-3 space-y-1.5 bg-slate-50/50">
-            <!-- Projecten komen hier -->
-        </div>
+            <!-- Back-up & Herstel Sectie -->
+            <div class="p-3 bg-slate-100 border border-slate-200 rounded-2xl grid grid-cols-2 gap-2 mb-4">
+                <button onclick="exportProjects()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 rounded-lg text-[9px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Exporteer Back-up
+                </button>
+                <button onclick="triggerImport()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 rounded-lg text-[9px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Importeer Back-up
+                </button>
+            </div>
 
-        <!-- Back-up & Herstel Sectie -->
-        <div class="p-3 bg-slate-100 border-t border-b border-slate-200 grid grid-cols-2 gap-2">
-            <button onclick="exportProjects()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 rounded-lg text-[9px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5">
-                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                Exporteer Back-up
-            </button>
-            <button onclick="triggerImport()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 rounded-lg text-[9px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5">
-                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Importeer Back-up
-            </button>
-        </div>
-
-        <div class="p-4">
-            <button onclick="openSaveModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-3 rounded-xl shadow-lg transition-all text-[10px] flex items-center justify-center gap-2 uppercase tracking-tight">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                Opslaan
-            </button>
+            <div>
+                <button onclick="openSaveModal()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-3 rounded-2xl shadow-lg transition-all text-[10px] flex items-center justify-center gap-2 uppercase tracking-tight">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                    Nieuw Ontwerp Opslaan
+                </button>
+            </div>
         </div>
     </div>
 
     <!-- Modal voor opslaan -->
-    <div id="save-modal" class="modal-overlay fixed inset-0 z-[100] hidden flex items-center justify-center p-6">
+    <div id="save-modal" class="modal-overlay fixed inset-0 z-[120] hidden flex items-center justify-center p-6">
         <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl">
             <h3 class="text-xl font-black text-slate-900 mb-2">Ontwerp Opslaan</h3>
             <p class="text-slate-500 text-sm mb-6">Geef je project een herkenbare naam.</p>
@@ -403,7 +335,7 @@
 
         <!-- Mobiele sluitbalk bovenaan bibliotheek inclusief Uitbreidingen en Sluitknop (X) -->
         <div class="p-2 border-b border-slate-200 flex items-center justify-between md:hidden bg-slate-900 text-white shadow-md gap-1 shrink-0">
-            <!-- Mobiele Uitbreidingen Toggles direct in de header bar (strak op één regel, Demons volledig uitgeschreven) -->
+            <!-- Mobiele Uitbreidingen Toggles direct in de header bar -->
             <div class="flex items-center justify-between flex-1 gap-1">
                 <div class="flex items-center gap-1 shrink-0">
                     <span class="text-[9px] font-black text-slate-300 uppercase tracking-tight">😈 Demons</span>
@@ -542,11 +474,10 @@
         const zoomDisplay = document.getElementById('zoom-display');
         const saveText = document.getElementById('save-text');
         const projectList = document.getElementById('project-list');
-        const projectDrawer = document.getElementById('project-drawer');
+        const projectDrawer = document.getElementById('project-modal'); // Gekoppeld aan het nieuwe modal overlay element
         const saveModal = document.getElementById('save-modal');
         const nameInput = document.getElementById('project-name-input');
         const projectCount = document.getElementById('project-count');
-        const resizeHandle = document.getElementById('project-resize-handle');
         const mainSidebar = document.getElementById('main-sidebar');
         const sidebarResizeHandle = document.getElementById('sidebar-resize-handle');
 
@@ -793,6 +724,11 @@
             return `Tegel ${fileName.replace('.gif', '')}`;
         }
 
+        // --- PROCECT MANAGER MODAL TOGGLE ---
+        function toggleProjectDrawer() {
+            projectDrawer.classList.toggle('hidden');
+        }
+
         function generateManifestData() {
             const activeTegels = [];
             const activeBlokkades = [];
@@ -828,6 +764,33 @@
                 : '<span class="text-slate-400 italic text-[10px]">Geen blokkades geplaatst</span>';
 
             document.getElementById('manifest-modal').classList.remove('hidden');
+        }
+
+        function closeManifestModal() {
+            document.getElementById('manifest-modal').classList.add('hidden');
+        }
+
+        function copyManifestToClipboard() {
+            const data = generateManifestData();
+            let text = "=== EL DORADO KAART MANIFEST ===\n\n";
+            text += "Grote Tegels:\n";
+            text += data.tegels.length > 0 ? data.tegels.join(", ") : "Geen";
+            text += "\n\nBlokkades:\n";
+            text += data.blokkades.length > 0 ? data.blokkades.join(", ") : "Geen";
+            text += "\n\nGemaakt met Tegel Studio Pro!";
+
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed'; 
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showCustomNotification('Manifest gekopieerd naar klembord!');
+            } catch (err) {
+                showCustomNotification('Kopiëren mislukt. Probeer het handmatig.', true);
+            }
+            document.body.removeChild(textarea);
         }
 
         // --- BACK-UP IMPORT & EXPORT LOGICA ---
@@ -877,31 +840,6 @@
             reader.readAsText(file);
         }
 
-        // --- RESIZE LOGIC PROJECT DRAWER ---
-        let isResizing = false;
-        resizeHandle.addEventListener('mousedown', (e) => {
-            isResizing = true;
-            document.body.style.cursor = 'col-resize';
-            projectDrawer.style.transition = 'none'; 
-            e.preventDefault();
-        });
-
-        window.addEventListener('mousemove', (e) => {
-            if (!isResizing) return;
-            const newWidth = e.clientX - projectDrawer.getBoundingClientRect().left;
-            if (newWidth > 150 && newWidth < 800) {
-                projectDrawer.style.width = `${newWidth}px`;
-            }
-        });
-
-        window.addEventListener('mouseup', () => {
-            if (isResizing) {
-                isResizing = false;
-                document.body.style.cursor = 'default';
-                projectDrawer.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-            }
-        });
-
         // --- MOBILE SIDEBAR TOGGLE ---
         function toggleSidebar() {
             const sidebar = document.getElementById('main-sidebar');
@@ -910,10 +848,6 @@
 
         // --- PROJECT MANAGEMENT ---
         let currentProjectName = null;
-
-        function toggleProjectDrawer() {
-            projectDrawer.classList.toggle('open');
-        }
 
         function saveStateToLocal(isAutoSave = true) {
             const state = { 
