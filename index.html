@@ -300,6 +300,21 @@
         </div>
     </div>
 
+    <!-- Custom Bevestigings Modal (Vervangt onbetrouwbare iframe-blokkerende confirm() popups) -->
+    <div id="confirm-modal" class="modal-overlay fixed inset-0 z-[270] hidden flex items-center justify-center p-6">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl border border-slate-100 text-center">
+            <div class="text-red-500 mb-4 flex justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <h3 id="confirm-title" class="text-lg font-black text-slate-900 mb-2">Weet je het zeker?</h3>
+            <p id="confirm-message" class="text-slate-500 text-xs mb-6 leading-relaxed">Deze actie kan niet ongedaan worden gemaakt.</p>
+            <div class="flex gap-3">
+                <button id="confirm-cancel-btn" class="flex-1 py-3 text-slate-400 font-bold hover:text-slate-600 transition-colors text-xs uppercase tracking-wider">Annuleren</button>
+                <button id="confirm-ok-btn" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-black py-3 rounded-xl shadow-lg transition-all text-xs uppercase tracking-wider">Ja, doorgaan</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Manifest Modal -->
     <div id="manifest-modal" class="modal-overlay fixed inset-0 z-[250] hidden flex items-center justify-center p-6">
         <div class="bg-white w-full max-w-md rounded-[2rem] p-8 shadow-2xl flex flex-col max-h-[85vh]">
@@ -509,6 +524,7 @@
         const projectList = document.getElementById('project-list');
         const projectDrawer = document.getElementById('project-modal');
         const saveModal = document.getElementById('save-modal');
+        const confirmModal = document.getElementById('confirm-modal');
         const nameInput = document.getElementById('project-name-input');
         const projectCount = document.getElementById('project-count');
         const mainSidebar = document.getElementById('main-sidebar');
@@ -638,6 +654,27 @@
             if (undoBtn) undoBtn.disabled = (historyIndex <= 0);
             if (redoBtn) redoBtn.disabled = (historyIndex >= history.length - 1);
         }
+
+        // --- CUSTOM CONFIRMATION ENGINE ---
+        let confirmCallback = null;
+
+        function showConfirm(title, message, onConfirm) {
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-message').textContent = message;
+            confirmModal.classList.remove('hidden');
+            confirmCallback = onConfirm;
+        }
+
+        function closeConfirmModal() {
+            confirmModal.classList.add('hidden');
+            confirmCallback = null;
+        }
+
+        document.getElementById('confirm-cancel-btn').onclick = closeConfirmModal;
+        document.getElementById('confirm-ok-btn').onclick = () => {
+            if (confirmCallback) confirmCallback();
+            closeConfirmModal();
+        };
 
         // --- SIDEBAR VISIBILITY ENGINE ---
         function toggleSidebar() {
@@ -1142,16 +1179,21 @@
 
         function deleteProject(name, e) {
             e.stopPropagation();
-            if (!confirm(`Project "${name}" definitief verwijderen?`)) return;
-
-            const projects = getAllProjects();
-            delete projects[name];
-            localStorage.setItem('eldorado_saved_projects', JSON.stringify(projects));
             
-            if (currentProjectName === name) currentProjectName = null;
-            saveStateToLocal();
-            renderProjectList();
-            showCustomNotification('Project verwijderd.');
+            showConfirm(
+                'Project verwijderen?',
+                `Weet je zeker dat je het project "${name}" definitief wilt verwijderen? Dit kan niet ongedaan worden gemaakt.`,
+                () => {
+                    const projects = getAllProjects();
+                    delete projects[name];
+                    localStorage.setItem('eldorado_saved_projects', JSON.stringify(projects));
+                    
+                    if (currentProjectName === name) currentProjectName = null;
+                    saveStateToLocal();
+                    renderProjectList();
+                    showCustomNotification('Project verwijderd.');
+                }
+            );
         }
 
         window.onload = () => {
@@ -1583,6 +1625,99 @@
         viewport.onwheel = (e) => { 
             e.preventDefault(); 
             adjustZoom(e.deltaY > 0 ? -0.1 : 0.1, e.clientX, e.clientY); 
+        };
+
+        function resetCanvas() {
+            showConfirm(
+                'Nieuw canvas openen?',
+                'Onopgeslagen wijzigingen in het huidige project gaan verloren. Weet je zeker dat je opnieuw wilt beginnen met een schoon canvas?',
+                () => {
+                    placedTiles = []; 
+                    selectedTileId = null; 
+                    currentProjectName = null;
+                    renderCanvas(); 
+                    renderLibrary(); 
+                    centerCanvas();
+                    renderProjectList();
+                    saveStateToLocal();
+                    pushState();
+                    showCustomNotification('Nieuw canvas geopend!');
+                }
+            );
+        }
+        
+        document.getElementById('btn-save').onclick = () => {
+            if (placedTiles.length === 0) return;
+            const oldSelected = selectedTileId;
+            selectedTileId = null;
+            renderCanvas();
+
+            setTimeout(() => {
+                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                placedTiles.forEach(t => {
+                    const el = document.querySelector(`[data-id="${t.instanceId}"]`);
+                    const w = el ? el.offsetWidth : 100;
+                    const h = el ? el.offsetHeight : 100;
+                    const diagonal = Math.sqrt(w*w + h*h);
+                    if (t.x - diagonal/2 < minX) minX = t.x - diagonal/2;
+                    if (t.y - diagonal/2 < minY) minY = t.y - diagonal/2;
+                    if (t.x + w + diagonal/2 > maxX) maxX = t.x + w + diagonal/2;
+                    if (t.y + h + diagonal/2 > maxY) maxY = t.y + h + diagonal/2;
+                });
+
+                const padding = 60;
+                const finalW = (maxX - minX) + (padding * 2);
+                const finalH = (maxY - minY) + (padding * 2);
+
+                staging.innerHTML = '';
+                staging.style.width = finalW + 'px';
+                staging.style.height = finalH + 'px';
+                staging.style.backgroundColor = '#ffffff'; 
+
+                const sortedTilesForExport = [...placedTiles].sort((a, b) => {
+                    const getZ = (t) => {
+                        const originalIdx = placedTiles.indexOf(t);
+                        return getTileZIndexBase(t.id) + originalIdx;
+                    };
+                    return getZ(a) - getZ(b);
+                });
+
+                sortedTilesForExport.forEach(t => {
+                    const el = document.querySelector(`[data-id="${t.instanceId}"]`);
+                    const w = el ? el.offsetWidth : 100;
+                    const h = el ? el.offsetHeight : 100;
+
+                    const clone = document.createElement('div');
+                    clone.style.position = 'absolute';
+                    clone.style.left = (t.x - minX + padding) + 'px';
+                    clone.style.top = (t.y - minY + padding) + 'px';
+                    clone.style.transform = `rotate(${t.rotation}deg)`;
+                    clone.style.imageRendering = 'pixelated';
+                    clone.style.width = w + 'px';
+                    clone.style.height = h + 'px';
+                    const img = document.createElement('img');
+                    img.src = tileAssets[t.id];
+                    img.style.display = 'block';
+                    img.style.width = w + 'px';
+                    img.style.height = h + 'px';
+                    clone.appendChild(img);
+                    staging.appendChild(clone);
+                });
+
+                html2canvas(staging, {
+                    backgroundColor: '#ffffff', 
+                    scale: 2,
+                    useCORS: true,
+                    logging: false
+                }).then(c => {
+                    const l = document.createElement('a'); 
+                    l.download = `tegel-export-${Date.now()}.jpg`; 
+                    l.href = c.toDataURL('image/jpeg', 0.95); 
+                    l.click();
+                    selectedTileId = oldSelected;
+                    renderCanvas();
+                });
+            }, 100);
         };
     </script>
 </body>
