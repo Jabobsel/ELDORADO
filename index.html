@@ -539,6 +539,9 @@
         let dragOffset = { x: 0, y: 0 };
         let isPanning = false;
         let startPan = { x: 0, y: 0 };
+        
+        // Globale track-vlag om te zien of we tijdens pointerdown actief bewogen hebben (panning of dragging)
+        let hasPagedOrDragged = false;
 
         // Globale PointerSet om multitouch hardwarematig en 100% foutloos te identificeren
         const activePointers = new Set();
@@ -1177,11 +1180,22 @@
             saveStateToLocal();
         }
 
+        // Click / Deselect handler op de achtergrond. Deselecteert alleen bij een 'zuivere tap' (niet bij schuiven)
         viewport.addEventListener('pointerdown', (e) => {
-            if (activePointers.size > 1) return; // Geen acties bij multitouch contact
+            if (activePointers.size > 1) return; 
             if (e.target === viewport || e.target === wrapper) {
-                selectedTileId = null;
-                renderCanvas();
+                let moved = false;
+                const onMove = () => { moved = true; };
+                const onUp = () => {
+                    window.removeEventListener('pointermove', onMove);
+                    window.removeEventListener('pointerup', onUp);
+                    if (!moved) {
+                        selectedTileId = null;
+                        renderCanvas();
+                    }
+                };
+                window.addEventListener('pointermove', onMove);
+                window.addEventListener('pointerup', onUp);
             }
         });
 
@@ -1258,15 +1272,34 @@
                     </button>
                 `;
                 
+                // Beheer selecteren vs pannen bij aanraken tegel
                 el.onpointerdown = (e) => {
                     if (activePointers.size > 1) {
                         cancelDragAndPan();
                         return;
                     }
                     if (e.button === 2) return;
-                    selectedTileId = tile.instanceId;
-                    renderCanvas();
-                    startDrag(e, tile.instanceId);
+                    
+                    const isAlreadySelected = (tile.instanceId === selectedTileId);
+                    
+                    if (isAlreadySelected) {
+                        // Tegel is al geselecteerd: start direct met slepen
+                        startDrag(e, tile.instanceId);
+                    } else {
+                        // Tegel is nog niet geselecteerd: registreer deze pointerdown.
+                        // We luisteren nu naar pointerup. Als er niet is geschoven (hasPagedOrDragged === false),
+                        // selecteren we de tegel. Als er wél is geschoven, pannen we gewoon het scherm!
+                        hasPagedOrDragged = false;
+                        
+                        const handlePointerUp = (upEvent) => {
+                            window.removeEventListener('pointerup', handlePointerUp);
+                            if (!hasPagedOrDragged) {
+                                selectedTileId = tile.instanceId;
+                                renderCanvas();
+                            }
+                        };
+                        window.addEventListener('pointerup', handlePointerUp);
+                    }
                 };
                 
                 wrapper.appendChild(el);
@@ -1347,6 +1380,7 @@
                 
                 el.style.left = `${dragTarget.x}px`;
                 el.style.top = `${dragTarget.y}px`;
+                hasPagedOrDragged = true; // Markeren dat we actief bewogen hebben
             };
             
             const up = () => {
@@ -1368,9 +1402,18 @@
         };
         window.onkeyup = (e) => { if (e.code === 'Space') isSpace = false; };
 
+        // Panning (Verschuiven scherm) handler op de viewport
         viewport.addEventListener('pointerdown', (e) => {
             if (activePointers.size > 1) return; 
-            const isBackground = (e.target === viewport || e.target === wrapper);
+            
+            // Checken of de gebruiker op een tegel heeft geklikt, en of deze momenteel geselecteerd is
+            const tileEl = e.target.closest('.tile-placed');
+            const isSelectedTile = tileEl && (tileEl.dataset.id === selectedTileId);
+            
+            // Pannen is toegestaan op de lege achtergrond, op de canvas-wrapper, 
+            // of op ELKE tegel die momenteel NIET is geselecteerd!
+            const isBackground = (e.target === viewport || e.target === wrapper || (tileEl && !isSelectedTile));
+            
             const isMiddleClick = (e.button === 1);
             const isSpacePan = (e.button === 0 && isSpace);
             const isTouchPan = (e.pointerType === 'touch' && isBackground);
@@ -1389,6 +1432,7 @@
                     panX = me.clientX - startPan.x; 
                     panY = me.clientY - startPan.y; 
                     updateTransform(); 
+                    hasPagedOrDragged = true; // Registreer de actieve panning beweging
                 };
                 
                 const up = () => { 
