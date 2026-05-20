@@ -336,7 +336,7 @@
         </div>
     </div>
 
-    <!-- Sidepanel / Bibliotheek (Hier zaten de layout en positionering-bugs. Nu absoluut op mobiel, statisch broertje op desktop) -->
+    <!-- Sidepanel / Bibliotheek -->
     <aside id="main-sidebar" 
            class="flex flex-col w-full h-[100dvh] md:h-full md:w-80 fixed md:static inset-0 z-[150] md:z-auto bg-white shadow-2xl overflow-hidden border-r border-slate-200 shrink-0">
         
@@ -433,7 +433,7 @@
     <!-- Canvas en Viewport (Neemt de resterende ruimte in beslag op een betrouwbare manier) -->
     <main class="flex-1 relative overflow-hidden flex flex-col h-full">
         
-        <!-- Floating Canvas Actions (Nu compact, horizontaal en volledig opgebouwd uit icoontjes) -->
+        <!-- Floating Canvas Actions (Compact, horizontaal en volledig opgebouwd uit icoontjes) -->
         <div class="absolute top-4 left-4 z-[100] flex flex-row gap-2 pointer-events-auto">
             <!-- Menu In/Uitklappen Button (Hamburger Icoontje) -->
             <button onclick="toggleSidebar()" class="flex items-center justify-center w-12 h-12 bg-slate-900 text-white rounded-2xl shadow-xl hover:bg-black transition-all" title="Menu in/uitklappen">
@@ -1573,93 +1573,10 @@
             }
         });
 
-        viewport.onwheel = (e) => { if (e.ctrlKey) { e.preventDefault(); adjustZoom(e.deltaY > 0 ? -0.1 : 0.1, e.clientX, e.clientY); } };
-
-        function resetCanvas() {
-            if (!confirm('Nieuw canvas openen? Onopgeslagen wijzigingen in het huidige project gaan verloren.')) return;
-            placedTiles = []; 
-            selectedTileId = null; 
-            currentProjectName = null;
-            renderCanvas(); 
-            renderLibrary(); 
-            centerCanvas();
-            renderProjectList();
-            saveStateToLocal();
-            pushState();
-        }
-        
-        document.getElementById('btn-save').onclick = () => {
-            if (placedTiles.length === 0) return;
-            const oldSelected = selectedTileId;
-            selectedTileId = null;
-            renderCanvas();
-
-            setTimeout(() => {
-                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-                placedTiles.forEach(t => {
-                    const el = document.querySelector(`[data-id="${t.instanceId}"]`);
-                    const w = el ? el.offsetWidth : 100;
-                    const h = el ? el.offsetHeight : 100;
-                    const diagonal = Math.sqrt(w*w + h*h);
-                    if (t.x - diagonal/2 < minX) minX = t.x - diagonal/2;
-                    if (t.y - diagonal/2 < minY) minY = t.y - diagonal/2;
-                    if (t.x + w + diagonal/2 > maxX) maxX = t.x + w + diagonal/2;
-                    if (t.y + h + diagonal/2 > maxY) maxY = t.y + h + diagonal/2;
-                });
-
-                const padding = 60;
-                const finalW = (maxX - minX) + (padding * 2);
-                const finalH = (maxY - minY) + (padding * 2);
-
-                staging.innerHTML = '';
-                staging.style.width = finalW + 'px';
-                staging.style.height = finalH + 'px';
-                staging.style.backgroundColor = '#ffffff'; 
-
-                const sortedTilesForExport = [...placedTiles].sort((a, b) => {
-                    const getZ = (t) => {
-                        const originalIdx = placedTiles.indexOf(t);
-                        return getTileZIndexBase(t.id) + originalIdx;
-                    };
-                    return getZ(a) - getZ(b);
-                });
-
-                sortedTilesForExport.forEach(t => {
-                    const el = document.querySelector(`[data-id="${t.instanceId}"]`);
-                    const w = el ? el.offsetWidth : 100;
-                    const h = el ? el.offsetHeight : 100;
-
-                    const clone = document.createElement('div');
-                    clone.style.position = 'absolute';
-                    clone.style.left = (t.x - minX + padding) + 'px';
-                    clone.style.top = (t.y - minY + padding) + 'px';
-                    clone.style.transform = `rotate(${t.rotation}deg)`;
-                    clone.style.imageRendering = 'pixelated';
-                    clone.style.width = w + 'px';
-                    clone.style.height = h + 'px';
-                    const img = document.createElement('img');
-                    img.src = tileAssets[t.id];
-                    img.style.display = 'block';
-                    img.style.width = w + 'px';
-                    img.style.height = h + 'px';
-                    clone.appendChild(img);
-                    staging.appendChild(clone);
-                });
-
-                html2canvas(staging, {
-                    backgroundColor: '#ffffff', 
-                    scale: 2,
-                    useCORS: true,
-                    logging: false
-                }).then(c => {
-                    const l = document.createElement('a'); 
-                    l.download = `tegel-export-${Date.now()}.jpg`; 
-                    l.href = c.toDataURL('image/jpeg', 0.95); 
-                    l.click();
-                    selectedTileId = oldSelected;
-                    renderCanvas();
-                });
-            }, 100);
+        // Alleen scrollen is nu genoeg om direct in en uit te zoomen. Geen ctrlKey checks meer.
+        viewport.onwheel = (e) => { 
+            e.preventDefault(); 
+            adjustZoom(e.deltaY > 0 ? -0.1 : 0.1, e.clientX, e.clientY); 
         };
     </script>
 </body>
