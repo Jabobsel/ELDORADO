@@ -447,10 +447,10 @@
         </div>
     </aside>
 
-    <!-- Canvas en Viewport (Neemt de resterende ruimte in beslag op een betrouwbare manier) -->
+    <!-- Canvas en Viewport -->
     <main class="flex-1 relative overflow-hidden flex flex-col h-full">
         
-        <!-- Floating Canvas Actions (Compact, horizontaal en volledig opgebouwd uit icoontjes) -->
+        <!-- Floating Canvas Actions -->
         <div class="absolute top-4 left-4 z-[100] flex flex-row gap-2 pointer-events-auto">
             <!-- Menu In/Uitklappen Button (Hamburger Icoontje) -->
             <button onclick="toggleSidebar()" class="flex items-center justify-center w-12 h-12 bg-slate-900 text-white rounded-2xl shadow-xl hover:bg-black transition-all" title="Menu in/uitklappen">
@@ -477,7 +477,7 @@
             <div id="canvas-wrapper"></div>
         </div>
 
-        <!-- Universele Dashboard balk onderin (met Zoom, Undo, Redo en de dynamische Diepteregeling buttons) -->
+        <!-- Universele Dashboard balk onderin -->
         <div id="unified-control-bar" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 bg-slate-900/95 backdrop-blur-md p-2.5 px-4 rounded-2xl shadow-2xl border border-slate-800 max-w-[95vw] overflow-x-auto">
             <!-- Undo & Redo (Alleen Icoontjes) -->
             <div class="flex items-center gap-1 shrink-0">
@@ -499,7 +499,7 @@
                 <button onclick="adjustZoom(0.1)" class="p-1 px-2 font-black text-sm text-slate-400 hover:text-white transition-colors">+</button>
             </div>
 
-            <!-- Dynamische Diepteregeling (Komt tevoorschijn als een tegel geselecteerd is) -->
+            <!-- Dynamische Diepteregeling -->
             <div id="layer-controls-wrapper" class="hidden flex items-center gap-3 shrink-0">
                 <!-- Divider -->
                 <div class="h-6 w-[1px] bg-slate-800"></div>
@@ -577,13 +577,13 @@
         let history = [];
         let historyIndex = -1;
 
-        // Menu statusbeheer (Volledig programmatic opgelost zodat het canvas de zijbalk nooit meer kan blokkeren)
+        // Menu statusbeheer
         let sidebarOpen = window.innerWidth >= 768; 
 
-        // Globale track-vlag om te zien of we tijdens pointerdown actief bewogen hebben (panning of dragging)
+        // Globale track-vlag
         let hasPagedOrDragged = false;
 
-        // Globale PointerSet om multitouch hardwarematig en 100% foutloos te identificeren
+        // Globale PointerSet
         const activePointers = new Set();
 
         function getCategoryForTile(fileName) {
@@ -612,6 +612,28 @@
             if (cat === 'blokkades') return 3000;
             if (cat === 'muisca') return 4000;
             return 0;
+        }
+
+        // --- EXPANSIE SCANNER EN TRANSLATOR ---
+        function getProjectExpansions(project) {
+            let demons = project.expansions?.demons || false;
+            let dangersMuisca = project.expansions?.dangersMuisca || false;
+            let dragons = project.expansions?.dragons || false;
+
+            // Achterwaartse compatibiliteitscan voor oudere projecten zonder metadata
+            if (project.placedTiles) {
+                project.placedTiles.forEach(tile => {
+                    const cat = getCategoryForTile(tile.id);
+                    if (cat === 'demonen') {
+                        demons = true;
+                    } else if (cat === 'gevaren' || cat === 'muisca') {
+                        dangersMuisca = true;
+                    } else if (cat === 'draken') {
+                        dragons = true;
+                    }
+                });
+            }
+            return { demons, dangersMuisca, dragons };
         }
 
         // --- HISTORY ENGINE (UNDO / REDO) ---
@@ -698,7 +720,6 @@
             document.getElementById('demons-toggle-desktop').checked = isActive;
             document.getElementById('demons-toggle-mobile').checked = isActive;
             
-            showCustomNotification(isActive ? 'Hexen & Demonen Actief (Blokkades 37 & 38 Ontgrendeld)' : 'Hexen & Demonen Gedeactiveerd.');
             renderCategoryTabs();
             renderLibrary();
             saveStateToLocal();
@@ -709,7 +730,6 @@
             document.getElementById('dangers-muisca-toggle-desktop').checked = isActive;
             document.getElementById('dangers-muisca-toggle-mobile').checked = isActive;
 
-            showCustomNotification(isActive ? 'Gevaren & Muisca Actief' : 'Gevaren & Muisca Gedeactiveerd.');
             renderCategoryTabs();
             renderLibrary();
             saveStateToLocal();
@@ -720,7 +740,6 @@
             document.getElementById('dragons-toggle-desktop').checked = isActive;
             document.getElementById('dragons-toggle-mobile').checked = isActive;
 
-            showCustomNotification(isActive ? 'Dragons & Treasures Actief' : 'Dragons & Treasures Gedeactiveerd.');
             renderCategoryTabs();
             renderLibrary();
             saveStateToLocal();
@@ -1096,7 +1115,6 @@
             
             const names = Object.keys(projects).sort();
             
-            // Defensieve controle toegevoegd: pas de teller aan als de container bestaat
             if (projectCount) {
                 projectCount.textContent = names.length;
             }
@@ -1107,13 +1125,34 @@
             }
 
             names.forEach(name => {
+                const p = projects[name];
+                const exps = getProjectExpansions(p);
+                const isActive = currentProjectName === name;
+                
+                let styledBadgesHTML = '';
+                if (exps.demons) {
+                    styledBadgesHTML += `<span class="text-[7px] font-black px-1.5 py-0.5 rounded uppercase tracking-tight ${isActive ? 'bg-blue-800 text-blue-100 border border-blue-500' : 'bg-purple-100 text-purple-800'}">😈 Demons</span> `;
+                }
+                if (exps.dangersMuisca) {
+                    styledBadgesHTML += `<span class="text-[7px] font-black px-1.5 py-0.5 rounded uppercase tracking-tight ${isActive ? 'bg-blue-800 text-blue-100 border border-blue-500' : 'bg-amber-100 text-amber-800'}">⚠️ Gevaren</span> `;
+                }
+                if (exps.dragons) {
+                    styledBadgesHTML += `<span class="text-[7px] font-black px-1.5 py-0.5 rounded uppercase tracking-tight ${isActive ? 'bg-blue-800 text-blue-100 border border-blue-500' : 'bg-emerald-100 text-emerald-800'}">🐉 Dragons</span> `;
+                }
+                if (!exps.demons && !exps.dangersMuisca && !exps.dragons) {
+                    styledBadgesHTML += `<span class="text-[7px] font-black px-1.5 py-0.5 rounded uppercase tracking-tight ${isActive ? 'bg-blue-800 text-blue-200' : 'bg-slate-100 text-slate-500'}">🗺️ Basis</span> `;
+                }
+
                 const div = document.createElement('div');
-                div.className = `flex items-center justify-between p-2 px-3 rounded-lg transition-all cursor-pointer group ${currentProjectName === name ? 'bg-blue-600 text-white shadow-md' : 'bg-white hover:bg-slate-100 border border-slate-100'}`;
+                div.className = `flex items-center justify-between p-2.5 px-3 rounded-xl transition-all cursor-pointer group ${isActive ? 'bg-blue-600 text-white shadow-md' : 'bg-white hover:bg-slate-100 border border-slate-100'}`;
                 div.innerHTML = `
                     <div class="flex flex-col overflow-hidden flex-1" onclick="loadProject('${name}')">
-                        <span class="text-[10px] font-bold truncate tracking-tight uppercase">${name}</span>
+                        <span class="text-[10px] font-black truncate tracking-tight uppercase ${isActive ? 'text-white' : 'text-slate-900'}">${name}</span>
+                        <div class="flex flex-wrap gap-1 mt-1.5">
+                            ${styledBadgesHTML}
+                        </div>
                     </div>
-                    <button onclick="deleteProject('${name}', event)" class="p-1 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100">
+                    <button onclick="deleteProject('${name}', event)" class="p-1 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100 shrink-0 ml-2 ${isActive ? 'text-blue-200 hover:text-white' : 'text-slate-400'}">
                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg>
                     </button>
                 `;
@@ -1139,7 +1178,12 @@
             projects[name] = {
                 placedTiles: JSON.parse(JSON.stringify(placedTiles)),
                 zoom, panX, panY,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                expansions: {
+                    demons: demonsActive,
+                    dangersMuisca: dangersMuiscaActive,
+                    dragons: dragonsActive
+                }
             };
             
             localStorage.setItem('eldorado_saved_projects', JSON.stringify(projects));
@@ -1159,6 +1203,12 @@
                 panX = p.panX || 0;
                 panY = p.panY || 0;
                 currentProjectName = name;
+                
+                // Herstel de actieve uitbreidingen op basis van de opgeslagen staat of gescande tegels
+                const exps = getProjectExpansions(p);
+                toggleDemons(exps.demons);
+                toggleDangersMuisca(exps.dangersMuisca);
+                toggleDragons(exps.dragons);
                 
                 selectedTileId = null;
                 renderCanvas();
