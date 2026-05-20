@@ -343,9 +343,9 @@
         <svg id="sidebar-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
 
-    <!-- Sidepanel / Bibliotheek -->
+    <!-- Sidepanel / Bibliotheek (Nu correct gedefinieerd met 'flex' ipv 'md:flex' om rendering te forceren) -->
     <aside id="main-sidebar" 
-           class="hidden md:flex flex-col w-full h-[100dvh] md:h-full md:w-80 fixed md:relative inset-0 md:inset-auto z-[150] md:z-50 bg-white shadow-2xl overflow-hidden border-r border-slate-200 shrink-0">
+           class="hidden flex flex-col w-full h-[100dvh] md:h-full md:w-80 fixed md:relative inset-0 md:inset-auto z-[150] md:z-50 bg-white shadow-2xl overflow-hidden border-r border-slate-200 shrink-0">
         
         <!-- Desktop Resize Handle op de rechter rand -->
         <div id="sidebar-resize-handle" class="hidden md:block absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-500/20 active:bg-blue-500/40 transition-colors z-[60]"></div>
@@ -472,7 +472,7 @@
                 <button onclick="moveSelectedToBack()" title="Helemaal naar achtergrond" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-[9px] uppercase tracking-wider px-3 py-2 rounded-lg transition-all">Onderop</button>
                 <button onclick="moveSelectedDown()" title="Eén stap naar achteren" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-[9px] uppercase tracking-wider px-3 py-2 rounded-lg transition-all">Omlaag</button>
                 <button onclick="moveSelectedUp()" title="Eén stap naar voren" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-[9px] uppercase tracking-wider px-3 py-2 rounded-lg transition-all">Omhoog</button>
-                <button onclick="moveSelectedToFront()" title="Helemaal naar voorgrond" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-[9px] uppercase tracking-wider px-3 py-2 rounded-lg transition-all">Bovenop</button>
+                <button onclick="moveSelectedToFront()" title="Helemaal naar voorgrond" class="bg-slate-900 hover:bg-black text-white font-black py-3 rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2">Bovenop</button>
             </div>
         </div>
         
@@ -695,7 +695,6 @@
         });
 
         // Voorkom hardwarematig dat de browser herlaadt of inzoomt tijdens manipulatie op het canvas zelf.
-        // Dit is geïsoleerd tot de viewport zelf, zodat global scrollen in de zijbalk onaangetast blijft!
         viewport.addEventListener('touchmove', function(e) {
             e.preventDefault();
         }, { passive: false });
@@ -1060,6 +1059,8 @@
             
             if (window.innerWidth < 768) {
                 mainSidebar.classList.add('hidden');
+            } else {
+                mainSidebar.classList.remove('hidden');
             }
         };
 
@@ -1216,6 +1217,7 @@
             saveStateToLocal();
         }
 
+        // --- DEPT/LAAG MANAGEMENT ---
         function moveSelectedDown() {
             if (!selectedTileId) return;
             const idx = placedTiles.findIndex(t => t.instanceId === selectedTileId);
@@ -1428,7 +1430,7 @@
                     const el = document.querySelector(`[data-id="${t.instanceId}"]`);
                     const w = el ? el.offsetWidth : 100;
                     const h = el ? el.offsetHeight : 100;
-                    const diagonal = Math.sqrt(w*w + h*h);
+                    const diagonal = Math.sqrt(w*w + h*w);
                     if (t.x - diagonal/2 < minX) minX = t.x - diagonal/2;
                     if (t.y - diagonal/2 < minY) minY = t.y - diagonal/2;
                     if (t.x + w + diagonal/2 > maxX) maxX = t.x + w + diagonal/2;
