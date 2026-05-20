@@ -508,7 +508,8 @@
             "17.gif", "18.gif", "19.gif", "20.gif", "21.gif", "22.gif", "23.gif", "24.gif",
             "25.gif", "26.gif", "27.gif", "28.gif", "29.gif", "30.gif", "31.gif", "32.gif",
             "33.gif", "34.gif", "35.gif", "36.gif",
-            "37.gif", "38.gif", "39.gif", "40.gif", "41.gif", "42.gif", "43.gif", "44.gif"
+            "37.gif", "38.gif", "39.gif", "40.gif", "41.gif", "42.gif", "43.gif", "44.gif",
+            "45.gif", "46.gif", "47.gif", "48.gif", "49.gif", "50.gif", "51.gif", "52.gif", "53.gif", "54.gif"
         ];
 
         const tileAssets = {};
@@ -559,6 +560,7 @@
                 if (num >= 3 && num <= 28) return 'dangers';
                 if (num >= 29 && num <= 36) return 'muisca';
                 if (num >= 37 && num <= 44) return 'blokkades';
+                if (num >= 45 && num <= 54) return 'draken';
             }
             return 'basisspel';
         }
@@ -1076,9 +1078,21 @@
 
         function getPartnerName(fileName) {
             const idx = tileNames.indexOf(fileName);
-            if (idx === -1 || idx >= 62) return null; 
-            const partnerIdx = (idx % 2 === 0) ? idx + 1 : idx - 1;
-            return tileNames[partnerIdx];
+            if (idx === -1) return null;
+            
+            // De originele 62 tegels (A-Z en 1-36) hebben partners
+            if (idx < 62) {
+                const partnerIdx = (idx % 2 === 0) ? idx + 1 : idx - 1;
+                return tileNames[partnerIdx];
+            }
+            
+            // Blokkades (37-44) hebben geen partners. Hun indexen zijn momenteel 62 t/m 69.
+            // Draken (45-54) hebben wel partners (45/46, 47/48, etc.). Hun indexen zijn 70 t/m 79.
+            if (idx >= 70 && idx <= 79) {
+                const partnerIdx = (idx % 2 === 0) ? idx + 1 : idx - 1;
+                return tileNames[partnerIdx];
+            }
+            return null;
         }
 
         function checkTileStatus(fileName) {
@@ -1095,20 +1109,6 @@
         function renderLibrary() {
             tileLibrary.innerHTML = '';
             
-            if (activeCategory === 'draken') {
-                const placeholder = document.createElement('div');
-                placeholder.className = 'col-span-2 py-12 px-4 text-center';
-                placeholder.innerHTML = `
-                    <div class="flex flex-col items-center gap-2">
-                        <span class="text-3xl">🐉</span>
-                        <span class="text-xs font-black text-slate-800 uppercase tracking-wider">Dragons, Treasures & Mysteries</span>
-                        <p class="text-[10px] text-slate-400 max-w-[180px] leading-relaxed">Hier zijn nog geen tegels van beschikbaar. Deze uitbreiding verschijnt later!</p>
-                    </div>
-                `;
-                tileLibrary.appendChild(placeholder);
-                return;
-            }
-
             const filteredTiles = tileNames.filter(fileName => getCategoryForTile(fileName) === activeCategory);
 
             filteredTiles.forEach((fileName) => {
@@ -1474,7 +1474,7 @@
                     const el = document.querySelector(`[data-id="${t.instanceId}"]`);
                     const w = el ? el.offsetWidth : 100;
                     const h = el ? el.offsetHeight : 100;
-                    const diagonal = Math.sqrt(w*w + h*w);
+                    const diagonal = Math.sqrt(w*w + h*h);
                     if (t.x - diagonal/2 < minX) minX = t.x - diagonal/2;
                     if (t.y - diagonal/2 < minY) minY = t.y - diagonal/2;
                     if (t.x + w + diagonal/2 > maxX) maxX = t.x + w + diagonal/2;
