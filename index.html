@@ -101,7 +101,7 @@
         }
 
         .tile-active {
-            z-index: 500 !important;
+            z-index: 50000 !important; /* Altijd boven alle lagen tijdens het slepen */
             cursor: move;
         }
 
@@ -563,6 +563,16 @@
                 if (num >= 45 && num <= 54) return 'draken';
             }
             return 'basisspel';
+        }
+
+        function getTileZIndexBase(fileName) {
+            const cat = getCategoryForTile(fileName);
+            if (cat === 'basisspel' || cat === 'demonen') return 0;
+            if (cat === 'dangers') return 1000;
+            if (cat === 'draken') return 2000;
+            if (cat === 'blokkades') return 3000;
+            if (cat === 'muisca') return 4000;
+            return 0;
         }
 
         function toggleDemons(isActive) {
@@ -1290,12 +1300,8 @@
                 el.style.top = `${tile.y}px`;
                 el.style.transform = `rotate(${tile.rotation}deg)`;
                 
-                let zIndex = idx;
-                if (tile.isMuisca) {
-                    zIndex = 100 + idx;
-                } else if (tile.isBlockade) {
-                    zIndex = 200 + idx;
-                }
+                // Bereken de exacte, correcte z-index laag
+                const zIndex = getTileZIndexBase(tile.id) + idx;
                 el.style.zIndex = zIndex;
                 
                 el.dataset.id = tile.instanceId;
@@ -1527,13 +1533,11 @@
                 staging.style.height = finalH + 'px';
                 staging.style.backgroundColor = '#ffffff'; 
 
+                // Sorteren voor export gebaseerd op exact dezelfde dieptelagen als het ontwerpbord
                 const sortedTilesForExport = [...placedTiles].sort((a, b) => {
                     const getZ = (t) => {
-                        const tileNum = parseInt(t.id);
                         const originalIdx = placedTiles.indexOf(t);
-                        if (!isNaN(tileNum) && tileNum >= 37 && tileNum <= 44) return 200 + originalIdx;
-                        if (!isNaN(tileNum) && tileNum >= 29 && tileNum <= 36) return 100 + originalIdx;
-                        return originalIdx;
+                        return getTileZIndexBase(t.id) + originalIdx;
                     };
                     return getZ(a) - getZ(b);
                 });
