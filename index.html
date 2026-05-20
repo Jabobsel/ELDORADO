@@ -21,7 +21,7 @@
             position: relative;
             cursor: grab;
             touch-action: none; 
-            background-color: #eaf5ec; /* Pastelgroene rustgevende achtergrond */
+            background-color: #eaf4ec; /* Rustgevend licht pastelgroene jungle achtergrond */
         }
 
         #viewport.panning { cursor: grabbing; }
@@ -106,6 +106,7 @@
 
         #main-sidebar {
             touch-action: auto !important; 
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .sidebar-item {
@@ -236,18 +237,18 @@
         }
     </style>
 </head>
-<body class="h-screen w-screen flex flex-col md:flex-row">
+<body class="h-screen w-screen flex flex-col md:flex-row bg-slate-950 overflow-hidden">
 
     <div id="export-staging"></div>
 
     <!-- Custom Toast Notificatie -->
-    <div id="custom-toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-[200] hidden items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl border text-xs font-bold transition-all"></div>
+    <div id="custom-toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-[300] hidden items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl border text-xs font-bold transition-all"></div>
 
     <!-- Hidden File Input voor Import -->
     <input type="file" id="import-file-input" class="hidden" accept=".json" onchange="importProjects(event)">
 
     <!-- Projecten Manager Modal -->
-    <div id="project-modal" class="modal-overlay fixed inset-0 z-[110] hidden flex items-center justify-center p-6">
+    <div id="project-modal" class="modal-overlay fixed inset-0 z-[250] hidden flex items-center justify-center p-6">
         <div class="bg-white w-full max-w-md rounded-[2rem] p-8 shadow-2xl flex flex-col max-h-[85vh]">
             <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
                 <h3 class="text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
@@ -285,7 +286,7 @@
     </div>
 
     <!-- Modal voor opslaan -->
-    <div id="save-modal" class="modal-overlay fixed inset-0 z-[120] hidden flex items-center justify-center p-6">
+    <div id="save-modal" class="modal-overlay fixed inset-0 z-[260] hidden flex items-center justify-center p-6">
         <div class="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl">
             <h3 class="text-xl font-black text-slate-900 mb-2">Ontwerp Opslaan</h3>
             <p class="text-slate-500 text-sm mb-6">Geef je project een herkenbare naam.</p>
@@ -298,7 +299,7 @@
     </div>
 
     <!-- Manifest Modal -->
-    <div id="manifest-modal" class="modal-overlay fixed inset-0 z-[110] hidden flex items-center justify-center p-6">
+    <div id="manifest-modal" class="modal-overlay fixed inset-0 z-[250] hidden flex items-center justify-center p-6">
         <div class="bg-white w-full max-w-md rounded-[2rem] p-8 shadow-2xl flex flex-col max-h-[85vh]">
             <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
                 <h3 class="text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
@@ -335,17 +336,12 @@
         </div>
     </div>
 
-    <!-- Mobiele Bibliotheek Toggle Knop -->
-    <button onclick="toggleSidebar()" class="md:hidden fixed top-4 right-4 z-[60] bg-slate-900 text-white p-3 rounded-full shadow-2xl border border-slate-700">
-        <svg id="sidebar-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>
-
-    <!-- Sidepanel / Bibliotheek -->
+    <!-- Sidepanel / Bibliotheek (Hier zaten de layout en positionering-bugs. Nu absoluut op mobiel, statisch broertje op desktop) -->
     <aside id="main-sidebar" 
-           class="hidden flex flex-col w-full h-[100dvh] md:h-full md:w-80 fixed md:relative inset-0 md:inset-auto z-[150] md:z-50 bg-white shadow-2xl overflow-hidden border-r border-slate-200 shrink-0">
+           class="flex flex-col w-full h-[100dvh] md:h-full md:w-80 fixed md:static inset-0 z-[150] md:z-auto bg-white shadow-2xl overflow-hidden border-r border-slate-200 shrink-0">
         
         <!-- Desktop Resize Handle op de rechter rand -->
-        <div id="sidebar-resize-handle" class="hidden md:block absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-500/20 active:bg-blue-500/40 transition-colors z-[60]"></div>
+        <div id="sidebar-resize-handle" class="hidden md:block absolute top-0 right-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-500/20 active:bg-blue-500/40 transition-colors z-[160]"></div>
 
         <!-- Mobiele sluitbalk bovenaan bibliotheek inclusief Uitbreidingen en Sluitknop (X) -->
         <div class="p-2 border-b border-slate-200 flex items-center justify-between md:hidden bg-slate-900 text-white shadow-md gap-1 shrink-0">
@@ -384,7 +380,7 @@
             <!-- Categorie Tabs -->
             <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/30">
                 <div class="flex flex-wrap gap-1.5 pb-1" id="category-tabs">
-                    <!-- Categorie knoppen worden hier dynamisch gegenereerd -->
+                    <!-- Categorie knoppen worden hier dadelijk dynamisch gegenereerd -->
                 </div>
             </div>
 
@@ -434,16 +430,22 @@
         </div>
     </aside>
 
-    <!-- Canvas en Viewport -->
-    <main class="flex-1 relative overflow-hidden flex flex-col">
-        <!-- Floating Canvas Actions (Naast elkaar geplaatst in een nette rij en geconverteerd naar pure iconen) -->
-        <div class="absolute top-4 left-4 z-30 flex flex-row gap-2 pointer-events-auto">
-            <!-- Projecten Button (Folder/Save Icoontje) -->
+    <!-- Canvas en Viewport (Neemt de resterende ruimte in beslag op een betrouwbare manier) -->
+    <main class="flex-1 relative overflow-hidden flex flex-col h-full">
+        
+        <!-- Floating Canvas Actions (Nu compact, horizontaal en volledig opgebouwd uit icoontjes) -->
+        <div class="absolute top-4 left-4 z-[100] flex flex-row gap-2 pointer-events-auto">
+            <!-- Menu In/Uitklappen Button (Hamburger Icoontje) -->
+            <button onclick="toggleSidebar()" class="flex items-center justify-center w-12 h-12 bg-slate-900 text-white rounded-2xl shadow-xl hover:bg-black transition-all" title="Menu in/uitklappen">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
+
+            <!-- Projecten Button (Save/Floppy Disk Icoontje) -->
             <button onclick="toggleProjectDrawer()" class="flex items-center justify-center w-12 h-12 bg-slate-900 text-white rounded-2xl shadow-xl hover:bg-black transition-all" title="Projecten">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
             </button>
             
-            <!-- Nieuw Canvas Button (Alleen Icoontje) -->
+            <!-- Nieuw Canvas Button (Alleen het Reset/Plus Icoontje) -->
             <button onclick="resetCanvas()" class="flex items-center justify-center w-12 h-12 bg-white border border-slate-200 text-slate-800 rounded-2xl shadow-md hover:bg-slate-50 transition-all" title="Nieuw Canvas">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-red-500"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
             </button>
@@ -458,14 +460,14 @@
             <div id="canvas-wrapper"></div>
         </div>
 
-        <!-- Universele, Geconsolideerde Dashboard balk onderin (met Zoom, Undo, Redo en dynamische Diepteregeling) -->
-        <div id="unified-control-bar" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[450] flex items-center gap-3 bg-slate-900/95 backdrop-blur-md p-2.5 px-4 rounded-2xl shadow-2xl border border-slate-800 max-w-[95vw] overflow-x-auto">
+        <!-- Universele Dashboard balk onderin (met Zoom, Undo, Redo en de dynamische Diepteregeling buttons) -->
+        <div id="unified-control-bar" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 bg-slate-900/95 backdrop-blur-md p-2.5 px-4 rounded-2xl shadow-2xl border border-slate-800 max-w-[95vw] overflow-x-auto">
             <!-- Undo & Redo (Alleen Icoontjes) -->
             <div class="flex items-center gap-1 shrink-0">
                 <button id="btn-undo" onclick="undo()" class="p-2 text-slate-400 hover:text-white disabled:opacity-20 disabled:pointer-events-none transition-colors" title="Ongedaan maken" disabled>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
                 </button>
-                <button id="btn-redo" onclick="redo()" class="p-2 text-slate-400 hover:text-white disabled:opacity-20 disabled:pointer-events-none transition-colors" title="Opnieuw uitvoeren" disabled>
+                <button id="btn-redo" onclick="redo()" class="p-2 text-slate-400 hover:text-white disabled:opacity-20 disabled:pointer-events-none transition-colors" title="Opnieuw" disabled>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg>
                 </button>
             </div>
@@ -480,7 +482,7 @@
                 <button onclick="adjustZoom(0.1)" class="p-1 px-2 font-black text-sm text-slate-400 hover:text-white transition-colors">+</button>
             </div>
 
-            <!-- Dynamische Diepteregeling (Wordt getoond als een tegel geselecteerd is) -->
+            <!-- Dynamische Diepteregeling (Komt tevoorschijn als een tegel geselecteerd is) -->
             <div id="layer-controls-wrapper" class="hidden flex items-center gap-3 shrink-0">
                 <!-- Divider -->
                 <div class="h-6 w-[1px] bg-slate-800"></div>
@@ -557,6 +559,9 @@
         let history = [];
         let historyIndex = -1;
 
+        // Menu statusbeheer (Volledig programmatic opgelost zodat het canvas de zijbalk nooit meer kan blokkeren)
+        let sidebarOpen = window.innerWidth >= 768; 
+
         // Globale track-vlag om te zien of we tijdens pointerdown actief bewogen hebben (panning of dragging)
         let hasPagedOrDragged = false;
 
@@ -630,6 +635,23 @@
             const redoBtn = document.getElementById('btn-redo');
             if (undoBtn) undoBtn.disabled = (historyIndex <= 0);
             if (redoBtn) redoBtn.disabled = (historyIndex >= history.length - 1);
+        }
+
+        // --- SIDEBAR VISIBILITY ENGINE ---
+        function toggleSidebar() {
+            sidebarOpen = !sidebarOpen;
+            updateSidebarUI();
+        }
+
+        function updateSidebarUI() {
+            if (sidebarOpen) {
+                mainSidebar.classList.remove('hidden');
+                mainSidebar.classList.add('flex');
+            } else {
+                mainSidebar.classList.add('hidden');
+                mainSidebar.classList.remove('flex');
+            }
+            saveStateToLocal();
         }
 
         function toggleDemons(isActive) {
@@ -826,7 +848,7 @@
         function showCustomNotification(msg, isError = false) {
             const toast = document.getElementById('custom-toast');
             toast.textContent = msg;
-            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[200] flex bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl border text-xs font-bold transition-all ${isError ? 'border-red-500' : 'border-emerald-500'}`;
+            toast.className = `fixed top-4 left-1/2 -translate-x-1/2 z-[300] flex bg-slate-900 text-white px-6 py-3 rounded-xl shadow-2xl border text-xs font-bold transition-all ${isError ? 'border-red-500' : 'border-emerald-500'}`;
             toast.classList.remove('hidden');
             setTimeout(() => {
                 toast.classList.add('hidden');
@@ -974,11 +996,6 @@
             reader.readAsText(file);
         }
 
-        function toggleSidebar() {
-            const sidebar = document.getElementById('main-sidebar');
-            sidebar.classList.toggle('hidden');
-        }
-
         let currentProjectName = null;
 
         function saveStateToLocal(isAutoSave = true) {
@@ -991,7 +1008,8 @@
                 demonsActive,
                 dangersMuiscaActive,
                 dragonsActive,
-                sidebarWidth: mainSidebar.style.width
+                sidebarWidth: mainSidebar.style.width,
+                sidebarOpen
             };
             localStorage.setItem('eldorado_active_session', JSON.stringify(state));
         }
@@ -1009,6 +1027,8 @@
                 demonsActive = data.demonsActive || false;
                 dangersMuiscaActive = data.dangersMuiscaActive || false;
                 dragonsActive = data.dragonsActive || false;
+
+                sidebarOpen = data.sidebarOpen !== undefined ? data.sidebarOpen : (window.innerWidth >= 768);
 
                 document.getElementById('demons-toggle-desktop').checked = demonsActive;
                 document.getElementById('dangers-muisca-toggle-desktop').checked = dangersMuiscaActive;
@@ -1144,13 +1164,18 @@
             history = [JSON.stringify(placedTiles)];
             historyIndex = 0;
             updateUndoRedoUI();
-            
-            if (window.innerWidth < 768) {
-                mainSidebar.classList.add('hidden');
-            } else {
-                mainSidebar.classList.remove('hidden');
-            }
+
+            // Werk de menu ui bij op basis van opgeslagen staat of schermbreedte
+            updateSidebarUI();
         };
+
+        // Zorg dat we responsive reageren als de schermgrootte drastisch verandert
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768 && !sidebarOpen) {
+                sidebarOpen = true;
+                updateSidebarUI();
+            }
+        });
 
         function centerCanvas() {
             const vRect = viewport.getBoundingClientRect();
@@ -1254,7 +1279,10 @@
                 `;
                 if (clickAction) container.onclick = () => {
                     clickAction();
-                    if (window.innerWidth < 768) toggleSidebar(); 
+                    if (window.innerWidth < 768) {
+                        sidebarOpen = false;
+                        updateSidebarUI();
+                    }
                 };
                 tileLibrary.appendChild(container);
             });
@@ -1283,7 +1311,7 @@
             renderCanvas();
             renderLibrary();
             saveStateToLocal();
-            pushState(); // Bewaar geschiedenis
+            pushState(); 
         }
 
         viewport.addEventListener('pointerdown', (e) => {
@@ -1402,7 +1430,7 @@
                 wrapper.appendChild(el);
             });
 
-            // Dynamische weergave van de Diepteregeling in de geconsolideerde balk
+            // Dynamische weergave van de Diepteregeling in de geconsolideerde balk onderin
             const layerWrapper = document.getElementById('layer-controls-wrapper');
             if (selectedTileId) {
                 if (layerWrapper) layerWrapper.classList.remove('hidden');
@@ -1487,7 +1515,6 @@
                 window.removeEventListener('pointermove', move);
                 window.removeEventListener('pointerup', up);
                 
-                // Alleen opslaan en history pushen als de positie daadwerkelijk veranderd is
                 if (dragTarget.x !== startX || dragTarget.y !== startY) {
                     saveStateToLocal();
                     pushState();
