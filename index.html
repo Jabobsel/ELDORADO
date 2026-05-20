@@ -772,18 +772,26 @@
 
         function getFriendlyName(fileName) {
             const num = parseInt(fileName);
-            if (!isNaN(num) && num >= 37 && num <= 44) {
-                const blockadeNames = {
-                    37: "Jungle (1) [Demonen]",
-                    38: "Jungle (2) [Demonen]",
-                    39: "Jungle (3)",
-                    40: "Jungle (4)",
-                    41: "Munt (1)",
-                    42: "Munt (2)",
-                    43: "Water (1)",
-                    44: "Water (2)"
-                };
-                return `Blokkade ${blockadeNames[num] || num}`;
+            if (!isNaN(num)) {
+                if (num >= 37 && num <= 44) {
+                    const blockadeNames = {
+                        37: "Jungle (1) [Demonen]",
+                        38: "Jungle (2) [Demonen]",
+                        39: "Jungle (3)",
+                        40: "Jungle (4)",
+                        41: "Munt (1)",
+                        42: "Munt (2)",
+                        43: "Water (1)",
+                        44: "Water (2)"
+                    };
+                    return `Blokkade ${blockadeNames[num] || num}`;
+                }
+                if (num >= 45 && num <= 53) {
+                    return `Draken Tegel ${num} (Open)`;
+                }
+                if (num === 54) {
+                    return `Draken Tegel 54 (Dicht)`;
+                }
             }
             return `Tegel ${fileName.replace('.gif', '')}`;
         }
@@ -798,8 +806,9 @@
             
             placedTiles.forEach(tile => {
                 const name = tile.id.replace('.gif', '');
-                const isBlk = parseInt(tile.id) >= 37;
-                if (isBlk) {
+                const num = parseInt(tile.id);
+                const isBlockade = !isNaN(num) && num >= 37 && num <= 44;
+                if (isBlockade) {
                     activeBlokkades.push(getFriendlyName(tile.id));
                 } else {
                     activeTegels.push(name);
@@ -1086,16 +1095,40 @@
                 return tileNames[partnerIdx];
             }
             
-            // Blokkades (37-44) hebben geen partners. Hun indexen zijn momenteel 62 t/m 69.
-            // Draken (45-54) hebben wel partners (45/46, 47/48, etc.). Hun indexen zijn 70 t/m 79.
-            if (idx >= 70 && idx <= 79) {
-                const partnerIdx = (idx % 2 === 0) ? idx + 1 : idx - 1;
-                return tileNames[partnerIdx];
-            }
+            // Blokkades (37-44) en Draken (45-54) hebben geen vaste 1-op-1 partner via deze functie
             return null;
         }
 
         function checkTileStatus(fileName) {
+            const num = parseInt(fileName);
+            
+            // Speciale dynamic pool logica voor Draken (45 t/m 54)
+            if (!isNaN(num) && num >= 45 && num <= 54) {
+                const placedOpenDragons = placedTiles.filter(t => {
+                    const n = parseInt(t.id);
+                    return !isNaN(n) && n >= 45 && n <= 53;
+                });
+                const placedClosedDragons = placedTiles.filter(t => t.id === "54.gif");
+                const totalDragonTilesPlaced = placedOpenDragons.length + placedClosedDragons.length;
+                
+                if (num === 54) {
+                    if (totalDragonTilesPlaced >= 9) {
+                        return 'limit_reached';
+                    }
+                    return 'free'; // Dichte tegel mag herhaaldelijk tot de pool van 9 op is
+                } else {
+                    // 45 t/m 53 zijn de unieke open zijdes
+                    if (placedTiles.some(pt => pt.id === fileName)) {
+                        return 'self';
+                    }
+                    if (totalDragonTilesPlaced >= 9) {
+                        return 'limit_reached';
+                    }
+                    return 'free';
+                }
+            }
+            
+            // Standaard logica voor overige speltegels
             if (placedTiles.some(pt => pt.id === fileName)) {
                 return 'self';
             }
@@ -1135,6 +1168,10 @@
                     const partner = getPartnerName(fileName).replace('.gif', '');
                     statusClasses = 'opacity-25 border-amber-500 bg-amber-50/5 pointer-events-none grayscale';
                     badgeHTML = `<span class="absolute top-1 right-1 bg-amber-600 text-white text-[7px] font-black px-1 py-0.5 rounded uppercase tracking-wider scale-95 origin-top-right">KANT ${partner} ACTIEF</span>`;
+                    clickAction = null;
+                } else if (status === 'limit_reached' && clickAction) {
+                    statusClasses = 'opacity-25 border-red-500 bg-red-50/5 pointer-events-none grayscale';
+                    badgeHTML = `<span class="absolute top-1 right-1 bg-red-600 text-white text-[7px] font-black px-1 py-0.5 rounded uppercase tracking-wider scale-95 origin-top-right">LIMIET BEREIKT (9)</span>`;
                     clickAction = null;
                 }
 
