@@ -12,7 +12,6 @@
             font-family: 'Inter', sans-serif; 
             overflow: hidden; 
             background-color: #020617; 
-            /* touch-action is hier verwijderd zodat scrollen in de sidebar op Android native werkt */
         }
         
         #viewport {
@@ -44,14 +43,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            /* Ware grootte behouden: geen geforceerde breedte/hoogte */
             filter: drop-shadow(0 0 1px rgba(255,255,255,0.1));
             transition: border-color 0.15s ease, box-shadow 0.15s ease;
         }
 
         .tile-placed img {
             max-width: none;
-            /* Ware grootte behouden */
             image-rendering: pixelated;
             display: block;
         }
@@ -107,13 +104,27 @@
         }
 
         #main-sidebar {
-            touch-action: auto !important; /* Forceert soepel native scrollgedrag op Android */
+            touch-action: auto !important; 
         }
 
+        /* Nieuwe Android Scroll & Multi-touch fixes voor de sidebar-items */
         .sidebar-item {
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             border: 2px solid transparent;
             background-color: #ffffff;
+            touch-action: pan-y !important; /* Forceert puur verticaal scrollen */
+            user-select: none !important;
+            -webkit-user-drag: none !important;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Touch-events stromen direct door naar de scrollbare parent; selectie of verslepen is onmogelijk */
+        .sidebar-item img, 
+        .sidebar-item span, 
+        .sidebar-item div {
+            pointer-events: none !important; 
+            user-select: none !important;
+            -webkit-user-drag: none !important;
         }
 
         .sidebar-item:hover:not(.used) {
@@ -236,7 +247,7 @@
     <!-- Hidden File Input voor Import -->
     <input type="file" id="import-file-input" class="hidden" accept=".json" onchange="importProjects(event)">
 
-    <!-- Projecten Manager Modal (Geopend als Overlay net als Manifest) -->
+    <!-- Projecten Manager Modal -->
     <div id="project-modal" class="modal-overlay fixed inset-0 z-[110] hidden flex items-center justify-center p-6">
         <div class="bg-white w-full max-w-md rounded-[2rem] p-8 shadow-2xl flex flex-col max-h-[85vh]">
             <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
@@ -478,7 +489,7 @@
         const zoomDisplay = document.getElementById('zoom-display');
         const saveText = document.getElementById('save-text');
         const projectList = document.getElementById('project-list');
-        const projectDrawer = document.getElementById('project-modal'); // Gekoppeld aan het nieuwe modal overlay element
+        const projectDrawer = document.getElementById('project-modal');
         const saveModal = document.getElementById('save-modal');
         const nameInput = document.getElementById('project-name-input');
         const projectCount = document.getElementById('project-count');
@@ -503,7 +514,6 @@
             tileAssets[name] = `./assets/${name}`;
         });
 
-        // Categorie data en state
         const categories = [
             { id: 'basisspel', label: '🗺️ Basis' },
             { id: 'demonen', label: '😈 Demonen' },
@@ -528,21 +538,18 @@
         let isPanning = false;
         let startPan = { x: 0, y: 0 };
 
-        // Globale touch-registratie voor multitouch bescherming
-        let activeTouches = 0;
+        // Globale PointerSet om multitouch hardwarematig en 100% foutloos te identificeren
+        const activePointers = new Set();
 
-        // --- EXPANSIE FILTER FUNCTIE ---
         function getCategoryForTile(fileName) {
             const name = fileName.replace('.gif', '');
             const num = parseInt(name);
             
             if (isNaN(num)) {
-                // Het is een letter (A-Z)
                 if (['Y', 'Z'].includes(name)) return 'basisspel';
                 if (['S', 'T', 'U', 'V', 'W', 'X'].includes(name)) return 'demonen';
-                return 'basisspel'; // A t/m R
+                return 'basisspel';
             } else {
-                // Het is een nummer (1-44)
                 if (num === 1 || num === 2) return 'basisspel';
                 if (num >= 3 && num <= 28) return 'dangers';
                 if (num >= 29 && num <= 36) return 'muisca';
@@ -551,7 +558,6 @@
             return 'basisspel';
         }
 
-        // --- EXPANSIE SYNC SWITCH LOGICA ---
         function toggleDemons(isActive) {
             demonsActive = isActive;
             document.getElementById('demons-toggle-desktop').checked = isActive;
@@ -595,7 +601,6 @@
             const tabsContainer = document.getElementById('category-tabs');
             tabsContainer.innerHTML = '';
             
-            // Filter categorieën op basis van toggles
             const visibleCategories = categories.filter(cat => {
                 if (cat.id === 'basisspel' || cat.id === 'blokkades') return true;
                 if (cat.id === 'demonen') return demonsActive;
@@ -604,7 +609,6 @@
                 return false;
             });
 
-            // Fallback naar basisspel als de huidige actieve categorie onzichtbaar wordt
             const activeIsVisible = visibleCategories.some(cat => cat.id === activeCategory);
             if (!activeIsVisible) {
                 activeCategory = 'basisspel';
@@ -624,7 +628,6 @@
             });
         }
 
-        // --- RESIZABLE DESKTOP SIDEBAR LOGICA ---
         let isSidebarResizing = false;
 
         sidebarResizeHandle.addEventListener('mousedown', (e) => {
@@ -651,7 +654,7 @@
             }
         });
 
-        // --- MULTITOUCH & PINCH GESTURES SECURITY ---
+        // --- MULTITOUCH & PINCH GESTURES SECURITY (Pointer Tracking) ---
         function cancelDragAndPan() {
             if (isDraggingTile) {
                 isDraggingTile = false;
@@ -667,20 +670,26 @@
             }
         }
 
-        window.addEventListener('touchstart', (e) => {
-            activeTouches = e.touches.length;
-            if (activeTouches > 1) {
-                // Direct de lopende versleep- of schuifactie stoppen als een tweede vinger het scherm raakt
+        // Globale pointer events registratie om multitouch-conflicten te elimineren
+        window.addEventListener('pointerdown', (e) => {
+            activePointers.add(e.pointerId);
+            if (activePointers.size > 1) {
                 cancelDragAndPan();
             }
-        }, { passive: false });
-
-        window.addEventListener('touchend', (e) => {
-            activeTouches = e.touches.length;
         });
 
-        window.addEventListener('touchcancel', (e) => {
-            activeTouches = e.touches.length;
+        window.addEventListener('pointerup', (e) => {
+            activePointers.delete(e.pointerId);
+        });
+
+        window.addEventListener('pointercancel', (e) => {
+            activePointers.delete(e.pointerId);
+        });
+
+        window.addEventListener('pointerout', (e) => {
+            if (e.pointerType === 'touch') {
+                activePointers.delete(e.pointerId);
+            }
         });
 
         // Voorkom dat de mobiele browser rubber-banded of herlaadt bij interactie op het canvas zelf
@@ -708,13 +717,12 @@
 
         viewport.addEventListener('touchmove', (e) => {
             if (isPinchZooming && e.touches.length === 2) {
-                e.preventDefault(); // Voorkom verspringen browser
+                e.preventDefault(); 
                 const dist = Math.hypot(
                     e.touches[0].clientX - e.touches[1].clientX,
                     e.touches[0].clientY - e.touches[1].clientY
                 );
                 
-                // Midden berekenen tussen de twee touchpoints
                 const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
                 const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
 
@@ -740,7 +748,6 @@
             }
         });
 
-        // --- CUSTOM TOAST NOTIFICATIE ---
         function showCustomNotification(msg, isError = false) {
             const toast = document.getElementById('custom-toast');
             toast.textContent = msg;
@@ -751,7 +758,6 @@
             }, 3000);
         }
 
-        // --- MANIFEST MODAL FUNCTIES ---
         function getFriendlyName(fileName) {
             const num = parseInt(fileName);
             if (!isNaN(num) && num >= 37 && num <= 44) {
@@ -770,7 +776,6 @@
             return `Tegel ${fileName.replace('.gif', '')}`;
         }
 
-        // --- PROCECT MANAGER MODAL TOGGLE ---
         function toggleProjectDrawer() {
             projectDrawer.classList.toggle('hidden');
         }
@@ -839,7 +844,6 @@
             document.body.removeChild(textarea);
         }
 
-        // --- BACK-UP IMPORT & EXPORT LOGICA ---
         function exportProjects() {
             const projects = localStorage.getItem('eldorado_saved_projects');
             if (!projects || projects === '{}') {
@@ -886,13 +890,11 @@
             reader.readAsText(file);
         }
 
-        // --- MOBILE SIDEBAR TOGGLE ---
         function toggleSidebar() {
             const sidebar = document.getElementById('main-sidebar');
             sidebar.classList.toggle('hidden');
         }
 
-        // --- PROJECT MANAGEMENT ---
         let currentProjectName = null;
 
         function saveStateToLocal(isAutoSave = true) {
@@ -924,12 +926,10 @@
                 dangersMuiscaActive = data.dangersMuiscaActive || false;
                 dragonsActive = data.dragonsActive || false;
 
-                // Sync desktop elements
                 document.getElementById('demons-toggle-desktop').checked = demonsActive;
                 document.getElementById('dangers-muisca-toggle-desktop').checked = dangersMuiscaActive;
                 document.getElementById('dragons-toggle-desktop').checked = dragonsActive;
 
-                // Sync mobile elements
                 document.getElementById('demons-toggle-mobile').checked = demonsActive;
                 document.getElementById('dangers-muisca-toggle-mobile').checked = dangersMuiscaActive;
                 document.getElementById('dragons-toggle-mobile').checked = dragonsActive;
@@ -1038,7 +1038,6 @@
             showCustomNotification('Project verwijderd.');
         }
 
-        // --- CORE STUDIO LOGIC ---
         window.onload = () => {
             const hasSession = loadStateFromLocal();
             renderCategoryTabs();
@@ -1065,7 +1064,7 @@
 
         function getPartnerName(fileName) {
             const idx = tileNames.indexOf(fileName);
-            if (idx === -1 || idx >= 62) return null; // Blokkades hebben geen fysieke partners
+            if (idx === -1 || idx >= 62) return null; 
             const partnerIdx = (idx % 2 === 0) ? idx + 1 : idx - 1;
             return tileNames[partnerIdx];
         }
@@ -1098,7 +1097,6 @@
                 return;
             }
 
-            // Filter tegels op basis van geselecteerde categorie
             const filteredTiles = tileNames.filter(fileName => getCategoryForTile(fileName) === activeCategory);
 
             filteredTiles.forEach((fileName) => {
@@ -1109,7 +1107,6 @@
                 let badgeHTML = '';
                 let clickAction = () => addTile(fileName);
 
-                // Demonen Blokkade uitsluiting (37 en 38)
                 if (activeCategory === 'blokkades' && (fileName === "37.gif" || fileName === "38.gif")) {
                     if (!demonsActive) {
                         statusClasses = 'opacity-30 border-slate-200 bg-slate-100 pointer-events-none cursor-not-allowed grayscale';
@@ -1171,16 +1168,14 @@
             saveStateToLocal();
         }
 
-        // --- UNIFIED CONTROLS (POINTER EVENTS) ---
         viewport.addEventListener('pointerdown', (e) => {
-            if (e.pointerType === 'touch' && activeTouches > 1) return; // Geen acties bij multitouch contact
+            if (activePointers.size > 1) return; // Geen acties bij multitouch contact
             if (e.target === viewport || e.target === wrapper) {
                 selectedTileId = null;
                 renderCanvas();
             }
         });
 
-        // --- DEPT/LAAG MANAGEMENT ---
         function moveSelectedToFront() {
             if (!selectedTileId) return;
             const idx = placedTiles.findIndex(t => t.instanceId === selectedTileId);
@@ -1233,10 +1228,6 @@
                 el.style.top = `${tile.y}px`;
                 el.style.transform = `rotate(${tile.rotation}deg)`;
                 
-                // Laag hiërarchie regels:
-                // Basis/Demonen/Dangers: idx
-                // Muisca: 100 + idx (altijd bovenop grote tegels)
-                // Blokkades: 200 + idx (altijd bovenop Muisca & grote tegels)
                 let zIndex = idx;
                 if (tile.isMuisca) {
                     zIndex = 100 + idx;
@@ -1257,7 +1248,11 @@
                 `;
                 
                 el.onpointerdown = (e) => {
-                    if (e.pointerType === 'touch' && activeTouches > 1) return; // Blokkeer multitouch selecties
+                    // Blokkeer selecties en acties tijdens multitouch
+                    if (activePointers.size > 1) {
+                        cancelDragAndPan();
+                        return;
+                    }
                     if (e.button === 2) return;
                     selectedTileId = tile.instanceId;
                     renderCanvas();
@@ -1267,7 +1262,6 @@
                 wrapper.appendChild(el);
             });
 
-            // Update zwevende laagbalk
             const bar = document.getElementById('layer-control-bar');
             const label = document.getElementById('active-tile-label');
             if (selectedTileId) {
@@ -1317,9 +1311,8 @@
             saveStateToLocal();
         }
 
-        // Slepen van tegels met pure, uiterst soepele pixelvrijheid
         function startDrag(e, id) {
-            if (e.pointerType === 'touch' && activeTouches > 1) return; // Geen drag starten tijdens multitouch
+            if (activePointers.size > 1) return; // Geen drag starten tijdens multitouch contact
             isDraggingTile = true;
             dragTarget = placedTiles.find(x => x.instanceId === id);
             const el = document.querySelector(`[data-id="${id}"]`);
@@ -1331,7 +1324,10 @@
             el.classList.add('tile-active');
             
             const move = (me) => {
-                if (activeTouches > 1) { cancelDragAndPan(); return; } // Veiligheidsmaatregel voor multitouch zoom-inbreuk
+                if (activePointers.size > 1) { 
+                    cancelDragAndPan(); 
+                    return; 
+                } 
                 const vr = viewport.getBoundingClientRect();
                 let targetX = (me.clientX - vr.left - panX) / zoom - dragOffset.x;
                 let targetY = (me.clientY - vr.top - panY) / zoom - dragOffset.y;
@@ -1355,7 +1351,6 @@
             window.addEventListener('pointerup', up);
         }
 
-        // Pannen (Scherm verschuiven)
         let isSpace = false;
         window.onkeydown = (e) => { 
             if (e.code === 'Space') isSpace = true;
@@ -1364,7 +1359,7 @@
         window.onkeyup = (e) => { if (e.code === 'Space') isSpace = false; };
 
         viewport.addEventListener('pointerdown', (e) => {
-            if (e.pointerType === 'touch' && activeTouches > 1) return; // Geen pan-initiatie tijdens multitouch gebaren
+            if (activePointers.size > 1) return; 
             const isBackground = (e.target === viewport || e.target === wrapper);
             const isMiddleClick = (e.button === 1);
             const isSpacePan = (e.button === 0 && isSpace);
@@ -1377,7 +1372,10 @@
                 viewport.classList.add('panning');
                 
                 const move = (me) => { 
-                    if (activeTouches > 1) { cancelDragAndPan(); return; } // Abort direct als multitouch actief is
+                    if (activePointers.size > 1) { 
+                        cancelDragAndPan(); 
+                        return; 
+                    } 
                     panX = me.clientX - startPan.x; 
                     panY = me.clientY - startPan.y; 
                     updateTransform(); 
@@ -1436,9 +1434,8 @@
                 staging.innerHTML = '';
                 staging.style.width = finalW + 'px';
                 staging.style.height = finalH + 'px';
-                staging.style.backgroundColor = '#ffffff'; // Force white background for JPG
+                staging.style.backgroundColor = '#ffffff'; 
 
-                // Render in de exacte z-index hiërarchie
                 const sortedTilesForExport = [...placedTiles].sort((a, b) => {
                     const getZ = (t) => {
                         const tileNum = parseInt(t.id);
@@ -1473,7 +1470,7 @@
                 });
 
                 html2canvas(staging, {
-                    backgroundColor: '#ffffff', // Force white background for JPG
+                    backgroundColor: '#ffffff', 
                     scale: 2,
                     useCORS: true,
                     logging: false
